@@ -16,7 +16,6 @@ package main
 import (
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/json"
 	"fmt"
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -33,7 +32,6 @@ import (
 	"os"
 	// "regexp"
 	"io/ioutil"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -191,72 +189,6 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 			up, prometheus.GaugeValue, 0.0,
 		)
 	}
-}
-
-func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
-
-	type scanMetric struct {
-		Total     float64
-		Completed float64
-		metrics   []interface{}
-		Requester string
-		Ongoing   bool
-	}
-	body := e.client.request("/api/scans/all/metrics")
-	var data scanMetric
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
-
-	scan_requester, _ := strconv.ParseFloat(data.Requester, 64)
-	ch <- prometheus.MustNewConstMetric(
-		scanRequesterCount, prometheus.GaugeValue, float64(scan_requester),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		scanTotalCount, prometheus.GaugeValue, float64(data.Total),
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		scanCompletedCount, prometheus.GaugeValue, float64(data.Completed),
-	)
-	return true
-}
-
-func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
-
-	type statisticsMetric struct {
-		Total_project_count   float64
-		Public_project_count  float64
-		Private_project_count float64
-		Public_repo_count     float64
-		Total_repo_count      float64
-		Private_repo_count    float64
-	}
-
-	body := e.client.request("/api/statistics")
-
-	var data statisticsMetric
-
-	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
-
-	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Total_project_count, "total_project_count",
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Public_project_count, "public_project_count",
-	)
-
-	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Private_project_count, "private_project_count",
-	)
-	return true
 }
 
 func init() {
