@@ -63,6 +63,11 @@ var (
 		"metrics of the latest scan all process",
 		nil, nil,
 	)
+	statisticsRequesterCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "statistics"),
+		"projects number and repositories number relevant to the user",
+		[]string{"key"}, nil,
+	)
 )
 
 type promHTTPLogger struct {
@@ -138,6 +143,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scanTotalCount
 	ch <- scanCompletedCount
 	ch <- scanRequesterCount
+	ch <- statisticsRequesterCount
 
 }
 
@@ -145,7 +151,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok := e.collectScanMetric(ch)
-	// ok = e.collectLeaderMetric(ch) && ok
+	ok = e.collectStatisticsMetric(ch) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
@@ -161,33 +167,38 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 
 	type scanMetric struct {
-		Total     string
-		Completed string
-		// metrics   string
+		Total     float64
+		Completed float64
+		metrics   []interface{}
 		Requester string
 		Ongoing   bool
 	}
 
 	req, err := http.NewRequest("GET", e.opts.uri+"/api/scans/all/metrics", nil)
 	if err != nil {
-		level.Error(e.logger).Log(err)
+		level.Error(e.logger).Log(err.Error())
+		return false
 	}
 	req.SetBasicAuth(e.opts.username, e.opts.password)
 
 	resp, err := e.client.Do(req)
-	if err != nil {
-		level.Error(e.logger).Log(err)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		level.Error(e.logger).Log(err.Error())
+		level.Error(e.logger).Log(resp.Status)
+		return false
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		level.Error(e.logger).Log(err)
+		level.Error(e.logger).Log(err.Error())
+		return false
 	}
 
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err)
+		level.Error(e.logger).Log(err.Error())
+		return false
 	}
 
 	scan_requester, _ := strconv.ParseFloat(data.Requester, 64)
@@ -195,14 +206,64 @@ func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		scanRequesterCount, prometheus.GaugeValue, float64(scan_requester),
 	)
 
-	scan_total, _ := strconv.ParseFloat(data.Total, 64)
 	ch <- prometheus.MustNewConstMetric(
-		scanTotalCount, prometheus.GaugeValue, float64(scan_total),
+		scanTotalCount, prometheus.GaugeValue, float64(data.Total),
 	)
 
-	scan_completed, _ := strconv.ParseFloat(data.Completed, 64)
 	ch <- prometheus.MustNewConstMetric(
-		scanCompletedCount, prometheus.GaugeValue, float64(scan_completed),
+		scanCompletedCount, prometheus.GaugeValue, float64(data.Completed),
+	)
+	return true
+}
+
+func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
+
+	type statisticsMetric struct {
+		Total_project_count   float64
+		Public_project_count  float64
+		Private_project_count float64
+		Public_repo_count     float64
+		Total_repo_count      float64
+		Private_repo_count    float64
+	}
+
+	req, err := http.NewRequest("GET", e.opts.uri+"/api/statistics", nil)
+	if err != nil {
+		level.Error(e.logger).Log(err.Error())
+		return false
+	}
+	req.SetBasicAuth(e.opts.username, e.opts.password)
+
+	resp, err := e.client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		level.Error(e.logger).Log(err.Error())
+		level.Error(e.logger).Log(resp.Status)
+		return false
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		level.Error(e.logger).Log(err.Error())
+		return false
+	}
+
+	var data statisticsMetric
+
+	if err := json.Unmarshal(body, &data); err != nil {
+		level.Error(e.logger).Log(err.Error())
+		return false
+	}
+
+	ch <- prometheus.MustNewConstMetric(
+		statisticsRequesterCount, prometheus.GaugeValue, data.Total_project_count, "total_project_count",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		statisticsRequesterCount, prometheus.GaugeValue, data.Public_project_count, "public_project_count",
+	)
+
+	ch <- prometheus.MustNewConstMetric(
+		statisticsRequesterCount, prometheus.GaugeValue, data.Private_project_count, "private_project_count",
 	)
 	return true
 }
