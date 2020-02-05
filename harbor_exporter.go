@@ -81,7 +81,7 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 // Exporter collects Consul stats from the given server and exports them using
 // the prometheus metrics package.
 type Exporter struct {
-	client *http.Client
+	client HarborClient
 	opts   harborOpts
 	logger log.Logger
 }
@@ -92,6 +92,35 @@ type harborOpts struct {
 	password string
 	timeout  time.Duration
 	insecure bool
+}
+
+type HarborClient struct {
+	client *http.Client
+	opts   harborOpts
+	logger log.Logger
+}
+
+func (h HarborClient) request(endpoint string) []byte {
+	req, err := http.NewRequest("GET", h.opts.uri+endpoint, nil)
+	if err != nil {
+		level.Error(h.logger).Log(err.Error())
+		return nil
+	}
+	req.SetBasicAuth(h.opts.username, h.opts.password)
+
+	resp, err := h.client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		level.Error(h.logger).Log(err.Error())
+		level.Error(h.logger).Log(resp.Status)
+		return nil
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		level.Error(h.logger).Log(err.Error())
+		return nil
+	}
+	return body
 }
 
 // NewExporter returns an initialized Exporter.
@@ -127,10 +156,10 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 	client := &http.Client{
 		Transport: transport,
 	}
-
+	hc := HarborClient{client, opts, logger}
 	// Init our exporter.
 	return &Exporter{
-		client: client,
+		client: hc,
 		opts:   opts,
 		logger: logger,
 	}, nil
@@ -173,27 +202,7 @@ func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		Requester string
 		Ongoing   bool
 	}
-
-	req, err := http.NewRequest("GET", e.opts.uri+"/api/scans/all/metrics", nil)
-	if err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
-	req.SetBasicAuth(e.opts.username, e.opts.password)
-
-	resp, err := e.client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		level.Error(e.logger).Log(err.Error())
-		level.Error(e.logger).Log(resp.Status)
-		return false
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
-
+	body := e.client.request("/api/scans/all/metrics")
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -227,25 +236,7 @@ func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 		Private_repo_count    float64
 	}
 
-	req, err := http.NewRequest("GET", e.opts.uri+"/api/statistics", nil)
-	if err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
-	req.SetBasicAuth(e.opts.username, e.opts.password)
-
-	resp, err := e.client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		level.Error(e.logger).Log(err.Error())
-		level.Error(e.logger).Log(resp.Status)
-		return false
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
-	}
+	body := e.client.request("/api/statistics")
 
 	var data statisticsMetric
 
