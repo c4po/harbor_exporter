@@ -71,6 +71,16 @@ var (
 		"repositories number relevant to the user",
 		[]string{"type"}, nil,
 	)
+	quotasCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "quotas_count"),
+		"quotas",
+		[]string{"type", "repo_name", "repo_id"}, nil,
+	)
+	quotasSize = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "quotas_size"),
+		"quotas",
+		[]string{"type", "repo_name", "repo_id"}, nil,
+	)
 )
 
 type promHTTPLogger struct {
@@ -177,6 +187,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scanRequesterCount
 	ch <- projectCount
 	ch <- repoCount
+	ch <- quotasCount
+	ch <- quotasSize
 
 }
 
@@ -185,6 +197,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok := e.collectScanMetric(ch)
 	ok = e.collectStatisticsMetric(ch) && ok
+	ok = e.collectQuotasMetric(ch) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
