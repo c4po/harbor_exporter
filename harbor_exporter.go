@@ -62,22 +62,22 @@ var (
 		nil, nil,
 	)
 	projectCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "project_count"),
+		prometheus.BuildFQName(namespace, "", "project_count_total"),
 		"projects number relevant to the user",
 		[]string{"type"}, nil,
 	)
 	repoCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "repo_count"),
+		prometheus.BuildFQName(namespace, "", "repo_count_total"),
 		"repositories number relevant to the user",
 		[]string{"type"}, nil,
 	)
 	quotasCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "quotas_count"),
+		prometheus.BuildFQName(namespace, "", "quotas_count_total"),
 		"quotas",
 		[]string{"type", "repo_name", "repo_id"}, nil,
 	)
 	quotasSize = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "quotas_size"),
+		prometheus.BuildFQName(namespace, "", "quotas_size_bytes"),
 		"quotas",
 		[]string{"type", "repo_name", "repo_id"}, nil,
 	)
