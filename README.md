@@ -15,9 +15,9 @@ make build
 | Metric | Meaning | Labels |
 | ------ | ------- | ------ |
 |harbor_up| | |
-| harbor_scans_completed | | |
-| harbor_scans_total | | |
-| harbor_scans_requester | | |
+|harbor_scans_completed | | |
+|harbor_scans_total | | |
+|harbor_scans_requester | | |
 |harbor_project_count_total| |type=[private_project,public_project,total_project]|
 |harbor_repo_count_total| |type=[private_repo,public_repo,total_repo]|
 |harbor_quotas_count_total| |repo_id, repo_name, type=[hard,used]|

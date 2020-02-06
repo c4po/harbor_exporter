@@ -86,6 +86,21 @@ var (
 		"Get system volume info (total/free size).",
 		[]string{"storage"}, nil,
 	)
+	repositoriesPullCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "repositories_pull_total"),
+		"Get public repositories which are accessed most.).",
+		[]string{"repo_name", "repo_id"}, nil,
+	)
+	repositoriesStarCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "repositories_star_total"),
+		"Get public repositories which are accessed most.).",
+		[]string{"repo_name", "repo_id"}, nil,
+	)
+	repositoriesTagsCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "repositories_tags_total"),
+		"Get public repositories which are accessed most.).",
+		[]string{"repo_name", "repo_id"}, nil,
+	)
 )
 
 type promHTTPLogger struct {
@@ -195,7 +210,9 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- quotasCount
 	ch <- quotasSize
 	ch <- systemVolumes
-
+	ch <- repositoriesPullCount
+	ch <- repositoriesStarCount
+	ch <- repositoriesTagsCount
 }
 
 // Collect fetches the stats from configured Consul location and delivers them
@@ -205,6 +222,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok = e.collectStatisticsMetric(ch) && ok
 	ok = e.collectQuotasMetric(ch) && ok
 	ok = e.collectSystemVolumesMetric(ch) && ok
+	ok = e.collectRepositoriesMetric(ch) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
