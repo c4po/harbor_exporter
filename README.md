@@ -22,6 +22,7 @@ make build
 |harbor_repo_count_total| |type=[private_repo,public_repo,total_repo]|
 |harbor_quotas_count_total| |repo_id, repo_name, type=[hard,used]|
 |harbor_quotas_size_bytes| | repo_id, repo_name, type=[hard,used]|
+|harbor_system_volumes_bytes| |storage=[free,total]|
 
 ### Flags
 

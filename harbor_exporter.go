@@ -81,6 +81,11 @@ var (
 		"quotas",
 		[]string{"type", "repo_name", "repo_id"}, nil,
 	)
+	systemVolumes = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "system_volumes_bytes"),
+		"Get system volume info (total/free size).",
+		[]string{"storage"}, nil,
+	)
 )
 
 type promHTTPLogger struct {
@@ -189,6 +194,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- repoCount
 	ch <- quotasCount
 	ch <- quotasSize
+	ch <- systemVolumes
 
 }
 
@@ -198,6 +204,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok := e.collectScanMetric(ch)
 	ok = e.collectStatisticsMetric(ch) && ok
 	ok = e.collectQuotasMetric(ch) && ok
+	ok = e.collectSystemVolumesMetric(ch) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
