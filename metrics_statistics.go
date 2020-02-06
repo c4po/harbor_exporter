@@ -27,27 +27,27 @@ func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Total_project_count, "total_project_count",
+		projectCount, prometheus.GaugeValue, data.Total_project_count, "total_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Public_project_count, "public_project_count",
+		projectCount, prometheus.GaugeValue, data.Public_project_count, "public_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Private_project_count, "private_project_count",
+		projectCount, prometheus.GaugeValue, data.Private_project_count, "private_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Public_repo_count, "public_repo_count",
+		repoCount, prometheus.GaugeValue, data.Public_repo_count, "public_repo",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Total_repo_count, "total_repo_count",
+		repoCount, prometheus.GaugeValue, data.Total_repo_count, "total_repo",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		statisticsRequesterCount, prometheus.GaugeValue, data.Private_repo_count, "private_repo_count",
+		repoCount, prometheus.GaugeValue, data.Private_repo_count, "private_repo",
 	)
 
 	return true

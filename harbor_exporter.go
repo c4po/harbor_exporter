@@ -61,10 +61,15 @@ var (
 		"metrics of the latest scan all process",
 		nil, nil,
 	)
-	statisticsRequesterCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, "", "statistics"),
-		"projects number and repositories number relevant to the user",
-		[]string{"key"}, nil,
+	projectCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "project_count"),
+		"projects number relevant to the user",
+		[]string{"type"}, nil,
+	)
+	repoCount = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "repo_count"),
+		"repositories number relevant to the user",
+		[]string{"type"}, nil,
 	)
 )
 
@@ -170,7 +175,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- scanTotalCount
 	ch <- scanCompletedCount
 	ch <- scanRequesterCount
-	ch <- statisticsRequesterCount
+	ch <- projectCount
+	ch <- repoCount
 
 }
 
