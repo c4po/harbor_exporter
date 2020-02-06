@@ -23,6 +23,9 @@ make build
 |harbor_quotas_count_total| |repo_id, repo_name, type=[hard,used]|
 |harbor_quotas_size_bytes| | repo_id, repo_name, type=[hard,used]|
 |harbor_system_volumes_bytes| |storage=[free,total]|
+|harbor_repositories_pull_total| |repo_id, repo_name|
+|harbor_repositories_star_total| |repo_id, repo_name|
+|harbor_repositories_tags_total| |repo_id, repo_name|
 
 ### Flags
 
