@@ -1,0 +1,30 @@
+version: 2.1
+jobs:
+  build:
+    environment:
+      DOCKER_IMAGE: c4po/harbor-exporter
+    docker:
+      - image: circleci/buildpack-deps:stretch
+    steps:
+      - checkout
+      - setup_remote_docker:
+          docker_layer_caching: true
+      - run:
+          name: Build Docker image
+          command: docker build -t $DOCKER_IMAGE:latest .
+      - run:
+          name: Publish Docker Image to Docker Hub
+          command: |
+            SHORT_GIT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)
+            echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            docker tag $DOCKER_IMAGE:latest $DOCKER_IMAGE:$SHORT_GIT_HASH
+            docker push $DOCKER_IMAGE:$SHORT_GIT_HASH
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: master
