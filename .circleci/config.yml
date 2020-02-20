@@ -30,6 +30,7 @@ jobs:
             SHORT_GIT_HASH=$(echo $CIRCLE_SHA1 | cut -c -7)
             VERSION=$(cat VERSION)
             echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+            docker push $DOCKER_IMAGE:latest
             docker tag $DOCKER_IMAGE:latest $DOCKER_IMAGE:$SHORT_GIT_HASH
             docker push $DOCKER_IMAGE:$SHORT_GIT_HASH
             docker tag $DOCKER_IMAGE:latest $DOCKER_IMAGE:$VERSION
