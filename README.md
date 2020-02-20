@@ -1,5 +1,7 @@
 # Prometheus exporter for Harbor 
 
+[![CircleCI](https://circleci.com/gh/c4po/harbor_exporter.svg?style=svg)](https://circleci.com/gh/c4po/harbor_exporter)
+
 Export harbor service health to Prometheus.
 
 To run it:
