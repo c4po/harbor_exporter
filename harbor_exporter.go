@@ -142,8 +142,11 @@ func (h HarborClient) request(endpoint string) []byte {
 	req.SetBasicAuth(h.opts.username, h.opts.password)
 
 	resp, err := h.client.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
+	if err != nil {
 		level.Error(h.logger).Log(err.Error())
+		return nil
+	}
+	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log(resp.Status)
 		return nil
 	}
