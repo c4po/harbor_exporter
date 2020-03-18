@@ -56,7 +56,8 @@ docker run -d -p 9107:9107 -e HARBOR_USERNAME=admin -e HARBOR_PASSWORD=password 
 ```
 ### Run in Kubernetes
 
-Set `exporter.enabled` to turn it on using Harbor to Kubernetes helm chart [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm) (since chart version `1.3.2`)
+Harbor Kubernetes helm chart [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm) come with it since version `1.3.2`.
+Just set helm value `exporter.enabled` to `true`.
 
 ## Using Grafana
 
