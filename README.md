@@ -56,7 +56,7 @@ docker run -d -p 9107:9107 -e HARBOR_USERNAME=admin -e HARBOR_PASSWORD=password 
 ```
 ### Run in Kubernetes
 
-if you deploy Harbor to Kubernetes using the helm chart [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm), you can use this file [kubernetes/harbor-exporter.yaml](kubernetes/harbor-exporter.yaml) to deploy the `harbor-exporter` with `secretKeyRef`
+Set `exporter.enabled` to turn it on using Harbor to Kubernetes helm chart [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm) (since chart version `1.3.2`)
 
 ## Using Grafana
 
