@@ -36,7 +36,10 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		return false
 	}
 
+	level.Debug(e.logger).Log(body)
+
 	for i := range data {
+		level.Debug(e.logger).Log(data[i].Ref.Name)
 		repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
 		ch <- prometheus.MustNewConstMetric(
 			quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
