@@ -26,13 +26,13 @@ spec:
   selector:
     matchLabels:
       app: harbor-exporter
-    strategy:
+  strategy:
     type: RollingUpdate
   template:
     metadata:
       labels:
         app: harbor-exporter
-        spec:
+    spec:
       serviceAccountName: default
       restartPolicy: Always
       securityContext:
@@ -45,15 +45,15 @@ spec:
           env:
             - name: HARBOR_URI
               valueFrom:
-                configmapkeyref:
-                  name: cover-harbor-core
+                configMapKeyRef:
+                  name: cover-harbor-core # change prefix to the name of your Helm release
                   key: EXT_ENDPOINT
             - name: HARBOR_USERNAME
               value: "admin"
             - name: HARBOR_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: cover-harbor-core
+                  name: cover-harbor-core # change prefix to the name of your Helm release
                   key: HARBOR_ADMIN_PASSWORD
 
           securityContext:
@@ -119,5 +119,5 @@ spec:
     matchLabels:
       app: harbor-exporter
     namespaceSelector:
-    matchNames:
-      - harbor
+      matchNames:
+      - harbor # change to the namespace where you deployed Harbor
