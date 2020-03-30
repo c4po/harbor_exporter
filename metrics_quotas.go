@@ -36,23 +36,26 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		return false
 	}
 
-	level.Debug(e.logger).Log(body)
+	level.Debug(e.logger).Log("body", body)
 
 	for i := range data {
-		level.Debug(e.logger).Log(data[i].Ref.Name)
-		repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
-		ch <- prometheus.MustNewConstMetric(
-			quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			quotasCount, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			quotasSize, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
-		)
-		ch <- prometheus.MustNewConstMetric(
-			quotasSize, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
-		)
+		if data[i].Ref.Name == "" || data[i].Ref.Id == 0 {
+			level.Debug(e.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
+		} else {
+			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
+			ch <- prometheus.MustNewConstMetric(
+				quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				quotasCount, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				quotasSize, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
+			)
+			ch <- prometheus.MustNewConstMetric(
+				quotasSize, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
+			)
+		}
 	}
 	return true
 }
