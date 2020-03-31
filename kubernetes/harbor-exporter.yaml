@@ -43,17 +43,23 @@ spec:
           image: "c4po/harbor-exporter"
           imagePullPolicy: IfNotPresent
           env:
+##          necessary in case you monitor multiple Harbor instances in your Prometheus
+#            - name: HARBOR_INSTANCE
+#              value: my_harbor
             - name: HARBOR_URI
-              valueFrom:
-                configMapKeyRef:
-                  name: cover-harbor-core # change prefix to the name of your Helm release
-                  key: EXT_ENDPOINT
+##            name of the Service for harbor-core
+              value: prefix-harbor-core # change prefix to the name of your Helm release
+##            optionally use below construction to address the external endpoint of Harbor
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: prefix-harbor-core # change prefix to the name of your Helm release
+#                  key: EXT_ENDPOINT
             - name: HARBOR_USERNAME
               value: "admin"
             - name: HARBOR_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: cover-harbor-core # change prefix to the name of your Helm release
+                  name: prefix-harbor-core # change prefix to the name of your Helm release
                   key: HARBOR_ADMIN_PASSWORD
 
           securityContext:
