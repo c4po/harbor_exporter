@@ -36,8 +36,10 @@ make build
 ```
 
 ### Environment variables
+Below environment variables can be used instead of the corresponding flags. Easy when running the exporter in a container.
 
 ```
+HARBOR_INSTANCE
 HARBOR_URI
 HARBOR_USERNAME
 HARBOR_PASSWORD
