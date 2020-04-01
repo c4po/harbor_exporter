@@ -17,19 +17,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+
 	// "github.com/pkg/errors"
+	"net/http"
+	_ "net/http/pprof"
+	"net/url"
+	"os"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"net/http"
-	_ "net/http/pprof"
-	"net/url"
-	"os"
+
 	// "regexp"
 	"io/ioutil"
 	"strings"
@@ -54,11 +58,7 @@ var (
 	repositoriesStarCount,
 	repositoriesTagsCount,
 	replicationStatus,
-	replicationsTotal,
-	replicationsFailed,
-	replicationsSucceed,
-	replicationsInProgress,
-	replicationsStopped *prometheus.Desc
+	replicationTasks *prometheus.Desc
 )
 
 type promHTTPLogger struct {
@@ -219,30 +219,10 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 		"Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.",
 		[]string{"repl_pol_name"}, nil,
 	)
-	replicationsTotal = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replications_total"),
-		"Get number of replication tasks in total in the last execution of this replication policy.",
-		[]string{"repl_pol_name"}, nil,
-	)
-	replicationsFailed = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replications_failed"),
-		"Get number of replication tasks that failed in the last execution of this replication policy.",
-		[]string{"repl_pol_name"}, nil,
-	)
-	replicationsSucceed = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replications_succeed"),
-		"Get number of replication tasks that completed successfully in the last execution of this replication policy.",
-		[]string{"repl_pol_name"}, nil,
-	)
-	replicationsInProgress = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replications_in_progress"),
-		"Get number of replication tasks in progress in the last execution of this replication policy.",
-		[]string{"repl_pol_name"}, nil,
-	)
-	replicationsStopped = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replications_stopped"),
-		"Get number of tags for which the replication stopped in the last execution of this replication policy.",
-		[]string{"repl_pol_name"}, nil,
+	replicationTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, opts.instance, "replication_tasks"),
+		"Get number of replication tasks in total and in various statuses in the last execution of this replication policy.",
+		[]string{"repl_pol_name", "type"}, nil,
 	)
 
 	// Init our exporter.
@@ -269,11 +249,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- repositoriesStarCount
 	ch <- repositoriesTagsCount
 	ch <- replicationStatus
-	ch <- replicationsTotal
-	ch <- replicationsFailed
-	ch <- replicationsSucceed
-	ch <- replicationsInProgress
-	ch <- replicationsStopped
+	ch <- replicationTasks
 }
 
 // Collect fetches the stats from configured Consul location and delivers them
@@ -370,4 +346,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

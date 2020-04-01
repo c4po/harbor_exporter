@@ -54,19 +54,19 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 				replicationStatus, prometheus.GaugeValue, replStatus, policyName,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationsTotal, prometheus.GaugeValue, data[i].Total, policyName,
+				replicationTasks, prometheus.GaugeValue, data[i].Total, policyName, "total",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationsFailed, prometheus.GaugeValue, data[i].Failed, policyName,
+				replicationTasks, prometheus.GaugeValue, data[i].Failed, policyName, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationsSucceed, prometheus.GaugeValue, data[i].Succeed, policyName,
+				replicationTasks, prometheus.GaugeValue, data[i].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationsInProgress, prometheus.GaugeValue, data[i].In_progress, policyName,
+				replicationTasks, prometheus.GaugeValue, data[i].In_progress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationsStopped, prometheus.GaugeValue, data[i].Stopped, policyName,
+				replicationTasks, prometheus.GaugeValue, data[i].Stopped, policyName, "stopped",
 			)
 		}
 	}
