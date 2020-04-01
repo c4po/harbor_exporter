@@ -14,7 +14,7 @@ make build
 To build a Docker image:
 
 ```
-docker build . --tag <mytag>
+make dockerbuild
 ```
 
 ## Exported Metrics
