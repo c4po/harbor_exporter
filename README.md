@@ -11,6 +11,11 @@ make build
 ./harbor_exporter [flags]
 ```
 
+To build a Docker image:
+
+```
+docker build . --tag <mytag>
+```
 
 ## Exported Metrics
 
@@ -28,6 +33,14 @@ make build
 |harbor_repositories_pull_total| |repo_id, repo_name|
 |harbor_repositories_star_total| |repo_id, repo_name|
 |harbor_repositories_tags_total| |repo_id, repo_name|
+|harbor_replication_status|status of the last execution of this replication policy: Succeed = 1, any other status = 0|repl_pol_name|
+|harbor_replications_total|number of replication tasks in total in the last execution of this replication policy|repl_pol_name|
+|harbor_replications_failed|number of replication tasks that failed in the last execution of this replication policy|repl_pol_name|
+|harbor_replications_succeed|number of replication tasks that completed successfully in the last execution of this replication policy|repl_pol_name|
+|harbor_replications_in_progress|number of replication tasks in progress in the last execution of this replication policy|repl_pol_name|
+|harbor_replications_stopped|number of tags for which the replication stopped in the last execution of this replication policy|repl_pol_name|
+
+_Note: when the harbor.instance flag is used, each metric name starts with `harbor_instancename_` instead of just `harbor_`._
 
 ### Flags
 
