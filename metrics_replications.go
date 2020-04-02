@@ -16,7 +16,6 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	}
 	type policyMetric []struct {
 		Status      string
-		Total       float64
 		Failed      float64
 		Succeed     float64
 		In_progress float64
@@ -52,9 +51,6 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 			}
 			ch <- prometheus.MustNewConstMetric(
 				replicationStatus, prometheus.GaugeValue, replStatus, policyName,
-			)
-			ch <- prometheus.MustNewConstMetric(
-				replicationTasks, prometheus.GaugeValue, data[i].Total, policyName, "total",
 			)
 			ch <- prometheus.MustNewConstMetric(
 				replicationTasks, prometheus.GaugeValue, data[i].Failed, policyName, "failed",

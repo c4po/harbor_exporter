@@ -221,8 +221,8 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 	)
 	replicationTasks = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, opts.instance, "replication_tasks"),
-		"Get number of replication tasks in total and in various statuses in the last execution of this replication policy.",
-		[]string{"repl_pol_name", "type"}, nil,
+		"Get number of replication tasks, with various results, in the latest execution of this replication policy.",
+		[]string{"repl_pol_name", "result"}, nil,
 	)
 
 	// Init our exporter.
