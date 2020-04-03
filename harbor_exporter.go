@@ -17,19 +17,23 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
+
 	// "github.com/pkg/errors"
+	"net/http"
+	_ "net/http/pprof"
+	"net/url"
+	"os"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/promlog"
 	"github.com/prometheus/common/promlog/flag"
 	"github.com/prometheus/common/version"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"net/http"
-	_ "net/http/pprof"
-	"net/url"
-	"os"
+
 	// "regexp"
 	"io/ioutil"
 	"strings"
@@ -52,7 +56,9 @@ var (
 	systemVolumes,
 	repositoriesPullCount,
 	repositoriesStarCount,
-	repositoriesTagsCount *prometheus.Desc
+	repositoriesTagsCount,
+	replicationStatus,
+	replicationTasks *prometheus.Desc
 )
 
 type promHTTPLogger struct {
@@ -96,17 +102,17 @@ func (h HarborClient) request(endpoint string) []byte {
 
 	resp, err := h.client.Do(req)
 	if err != nil {
-		level.Error(h.logger).Log(err.Error())
+		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil
 	}
 	if resp.StatusCode != http.StatusOK {
-		level.Error(h.logger).Log(resp.Status)
+		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
 		return nil
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		level.Error(h.logger).Log(err.Error())
+		level.Error(h.logger).Log("msg", "Error reading response of request for "+endpoint, "err", err.Error())
 		return nil
 	}
 	return body
@@ -208,6 +214,16 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 		"Get public repositories which are accessed most.).",
 		[]string{"repo_name", "repo_id"}, nil,
 	)
+	replicationStatus = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, opts.instance, "replication_status"),
+		"Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.",
+		[]string{"repl_pol_name"}, nil,
+	)
+	replicationTasks = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, opts.instance, "replication_tasks"),
+		"Get number of replication tasks, with various results, in the latest execution of this replication policy.",
+		[]string{"repl_pol_name", "result"}, nil,
+	)
 
 	// Init our exporter.
 	return &Exporter{
@@ -232,6 +248,8 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- repositoriesPullCount
 	ch <- repositoriesStarCount
 	ch <- repositoriesTagsCount
+	ch <- replicationStatus
+	ch <- replicationTasks
 }
 
 // Collect fetches the stats from configured Consul location and delivers them
@@ -242,6 +260,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok = e.collectQuotasMetric(ch) && ok
 	ok = e.collectSystemVolumesMetric(ch) && ok
 	ok = e.collectRepositoriesMetric(ch) && ok
+	ok = e.collectReplicationsMetric(ch) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
