@@ -28,7 +28,7 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			Storage float64
 		}
 	}
-	body := e.client.request("/api/quotas")
+	body := e.client.request("/api/v2.0/quotas")
 	var data quotaMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
