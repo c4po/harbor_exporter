@@ -105,6 +105,8 @@ func (h HarborClient) request(endpoint string) []byte {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil
 	}
+	defer resp.Body.Close()
+	
 	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
 		return nil
