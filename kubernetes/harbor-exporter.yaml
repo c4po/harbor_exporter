@@ -48,7 +48,7 @@ spec:
 #              value: my_harbor
             - name: HARBOR_URI
 ##            name of the Service for harbor-core
-              value: prefix-harbor-core # change prefix to the name of your Helm release
+              value: http://prefix-harbor-core # change prefix to the name of your Helm release
 ##            optionally use below construction to address the external endpoint of Harbor
 #              valueFrom:
 #                configMapKeyRef:
