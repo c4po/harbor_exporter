@@ -17,7 +17,7 @@ func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 		Private_repo_count    float64
 	}
 
-	body := e.client.request("/api/statistics")
+	body := e.client.request("/statistics")
 
 	var data statisticsMetric
 

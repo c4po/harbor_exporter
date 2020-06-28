@@ -23,7 +23,7 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 
-	policiesBody := e.client.request("/api/replication/policies")
+	policiesBody := e.client.request("/replication/policies")
 	var policiesData policiesMetrics
 
 	if err := json.Unmarshal(policiesBody, &policiesData); err != nil {
@@ -35,7 +35,7 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 		policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
 		policyName := policiesData[i].Name
 
-		body := e.client.request("/api/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
+		body := e.client.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
 		var data policyMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {

@@ -16,7 +16,7 @@ func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		Requester string
 		Ongoing   bool
 	}
-	body := e.client.request("/api/scans/all/metrics")
+	body := e.client.request("/scans/all/metrics")
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {

@@ -84,6 +84,7 @@ type harborOpts struct {
 	password string
 	timeout  time.Duration
 	insecure bool
+	version  string
 }
 
 type HarborClient struct {
@@ -93,7 +94,7 @@ type HarborClient struct {
 }
 
 func (h HarborClient) request(endpoint string) []byte {
-	req, err := http.NewRequest("GET", h.opts.uri+endpoint, nil)
+	req, err := http.NewRequest("GET", h.opts.uri+h.opts.version+endpoint, nil)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
 		return nil
@@ -106,7 +107,7 @@ func (h HarborClient) request(endpoint string) []byte {
 		return nil
 	}
 	defer resp.Body.Close()
-	
+
 	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
 		return nil
@@ -153,6 +154,18 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 	client := &http.Client{
 		Transport: transport,
 	}
+
+	resp, err := client.Get(uri + "/api/systeminfo")
+	level.Info(logger).Log("check v1 with /api/systeminfo: ", resp.StatusCode)
+	if resp.StatusCode == 200 {
+		opts.version = "/api"
+	}
+	resp, err = client.Get(uri + "/api/v2.0/systeminfo")
+	level.Info(logger).Log("check v2: with /api/v2.0/systeminfo", resp.StatusCode)
+	if resp.StatusCode == 200 {
+		opts.version = "/api/v2.0"
+	}
+
 	hc := HarborClient{client, opts, logger}
 
 	// Init Prometheus Descriptors

@@ -13,7 +13,7 @@ func (e *Exporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool 
 			Free  float64
 		}
 	}
-	body := e.client.request("/api/systeminfo/volumes")
+	body := e.client.request("/systeminfo/volumes")
 	var data systemVolumesMetric
 	if err := json.Unmarshal(body, &data); err != nil {
 		level.Error(e.logger).Log(err.Error())
