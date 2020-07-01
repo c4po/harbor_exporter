@@ -17,6 +17,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
+        "context"
 
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
@@ -101,7 +102,9 @@ func (h HarborClient) request(endpoint string) []byte {
 	}
 	req.SetBasicAuth(h.opts.username, h.opts.password)
 
-	resp, err := h.client.Do(req)
+        ctx, cancel := context.WithTimeout(context.Background(), h.opts.timeout * time.Millisecond)
+        defer cancel()
+	resp, err := h.client.Do(req.WithContext(ctx))
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil
