@@ -45,20 +45,7 @@ const (
 )
 
 var (
-	up,
-	scanTotalCount,
-	scanCompletedCount,
-	scanRequesterCount,
-	projectCount,
-	repoCount,
-	quotasCount,
-	quotasSize,
-	systemVolumes,
-	repositoriesPullCount,
-	repositoriesStarCount,
-	repositoriesTagsCount,
-	replicationStatus,
-	replicationTasks *prometheus.Desc
+	up *prometheus.Desc
 )
 
 type promHTTPLogger struct {
@@ -72,9 +59,7 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 // Exporter collects Consul stats from the given server and exports them using
 // the prometheus metrics package.
 type Exporter struct {
-	client HarborClient
-	opts   harborOpts
-	logger log.Logger
+	upChannel chan bool
 }
 
 type harborOpts struct {
@@ -122,7 +107,7 @@ func (h HarborClient) request(endpoint string) []byte {
 }
 
 // NewExporter returns an initialized Exporter.
-func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
+func NewHarborClient(opts harborOpts, logger log.Logger) (*HarborClient, error) {
 	uri := opts.uri
 	if !strings.Contains(uri, "://") {
 		uri = "http://" + uri
@@ -179,116 +164,39 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 		return nil, fmt.Errorf("unable to determine harbor version")
 	}
 
-	hc := HarborClient{client, opts, logger}
+	return &HarborClient{client, opts, logger}, nil
+}
 
+// NewExporter returns an initialized Exporter.
+func NewExporter(instance string) *Exporter {
 	// Init Prometheus Descriptors
 	up = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "up"),
+		prometheus.BuildFQName(namespace, instance, "up"),
 		"Was the last query of harbor successful.",
 		nil, nil,
-	)
-	scanTotalCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "scans_total"),
-		"metrics of the latest scan all process",
-		nil, nil,
-	)
-	scanCompletedCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "scans_completed"),
-		"metrics of the latest scan all process",
-		nil, nil,
-	)
-	scanRequesterCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "scans_requester"),
-		"metrics of the latest scan all process",
-		nil, nil,
-	)
-	projectCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "project_count_total"),
-		"projects number relevant to the user",
-		[]string{"type"}, nil,
-	)
-	repoCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "repo_count_total"),
-		"repositories number relevant to the user",
-		[]string{"type"}, nil,
-	)
-	quotasCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "quotas_count_total"),
-		"quotas",
-		[]string{"type", "repo_name", "repo_id"}, nil,
-	)
-	quotasSize = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "quotas_size_bytes"),
-		"quotas",
-		[]string{"type", "repo_name", "repo_id"}, nil,
-	)
-	systemVolumes = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "system_volumes_bytes"),
-		"Get system volume info (total/free size).",
-		[]string{"storage"}, nil,
-	)
-	repositoriesPullCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "repositories_pull_total"),
-		"Get public repositories which are accessed most.).",
-		[]string{"repo_name", "repo_id"}, nil,
-	)
-	repositoriesStarCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "repositories_star_total"),
-		"Get public repositories which are accessed most.).",
-		[]string{"repo_name", "repo_id"}, nil,
-	)
-	repositoriesTagsCount = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "repositories_tags_total"),
-		"Get public repositories which are accessed most.).",
-		[]string{"repo_name", "repo_id"}, nil,
-	)
-	replicationStatus = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replication_status"),
-		"Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.",
-		[]string{"repl_pol_name"}, nil,
-	)
-	replicationTasks = prometheus.NewDesc(
-		prometheus.BuildFQName(namespace, opts.instance, "replication_tasks"),
-		"Get number of replication tasks, with various results, in the latest execution of this replication policy.",
-		[]string{"repl_pol_name", "result"}, nil,
 	)
 
 	// Init our exporter.
 	return &Exporter{
-		client: hc,
-		opts:   opts,
-		logger: logger,
-	}, nil
+		upChannel: make(chan bool, 6),
+	}
 }
 
 // Describe describes all the metrics ever exported by the Consul exporter. It
 // implements prometheus.Collector.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- up
-	ch <- scanTotalCount
-	ch <- scanCompletedCount
-	ch <- scanRequesterCount
-	ch <- projectCount
-	ch <- repoCount
-	ch <- quotasCount
-	ch <- quotasSize
-	ch <- systemVolumes
-	ch <- repositoriesPullCount
-	ch <- repositoriesStarCount
-	ch <- repositoriesTagsCount
-	ch <- replicationStatus
-	ch <- replicationTasks
 }
 
 // Collect fetches the stats from configured Consul location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	ok := e.collectScanMetric(ch)
-	ok = e.collectStatisticsMetric(ch) && ok
-	ok = e.collectQuotasMetric(ch) && ok
-	ok = e.collectSystemVolumesMetric(ch) && ok
-	ok = e.collectRepositoriesMetric(ch) && ok
-	ok = e.collectReplicationsMetric(ch) && ok
+	ok := <-e.upChannel
+	ok = <-e.upChannel && ok
+	ok = <-e.upChannel && ok
+	ok = <-e.upChannel && ok
+	ok = <-e.upChannel && ok
+	ok = <-e.upChannel && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
@@ -328,12 +236,20 @@ func main() {
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
 
-	exporter, err := NewExporter(opts, logger)
+	exporter := NewExporter(opts.instance)
+	prometheus.MustRegister(exporter)
+
+	client, err := NewHarborClient(opts, logger)
 	if err != nil {
 		level.Error(logger).Log("msg", "Error creating the exporter", "err", err)
 		os.Exit(1)
 	}
-	prometheus.MustRegister(exporter)
+	prometheus.MustRegister(NewQuotasCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewReplicationsCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewRepositoriesCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewScansCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewStatisticsCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewSystemVolumesCollector(client, logger, exporter.upChannel, opts.instance))
 
 	http.Handle(*metricsPath,
 		promhttp.InstrumentMetricHandler(

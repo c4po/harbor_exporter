@@ -2,13 +2,53 @@ package main
 
 import (
 	"encoding/json"
+	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
 )
 
-func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
+type QuotasCollector struct {
+	client *HarborClient
+	logger log.Logger
+	upChannel chan<- bool
+
+	quotasUp *prometheus.Desc
+	quotasCount *prometheus.Desc
+	quotasSize *prometheus.Desc
+}
+
+func NewQuotasCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *QuotasCollector {
+	return &QuotasCollector{
+		client: c,
+		logger: l,
+		upChannel: u,
+		quotasUp: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "quotas_up"),
+			"Was the last query of harbor quotas successful.",
+			nil, nil,
+		),
+		quotasCount: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "quotas_count_total"),
+			"quotas",
+			[]string{"type", "repo_name", "repo_id"}, nil,
+		),
+		quotasSize: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "quotas_size_bytes"),
+			"quotas",
+			[]string{"type", "repo_name", "repo_id"}, nil,
+		),
+	}
+}
+
+func (qc *QuotasCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- qc.quotasUp
+	ch <- qc.quotasCount
+	ch <- qc.quotasSize
+}
+
+func (qc *QuotasCollector) Collect(ch chan<- prometheus.Metric) {
 
 	type quotaMetric []struct {
 		Id  float64
@@ -28,34 +68,41 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			Storage float64
 		}
 	}
-	body := e.client.request("/quotas")
+	body := qc.client.request("/quotas")
 	var data quotaMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
+		level.Error(qc.logger).Log(err.Error())
+		ch <- prometheus.MustNewConstMetric(
+			qc.quotasUp, prometheus.GaugeValue, 0.0,
+		)
+		qc.upChannel <- false
+		return
 	}
 
-	level.Debug(e.logger).Log("body", body)
+	level.Debug(qc.logger).Log("body", body)
 
 	for i := range data {
 		if data[i].Ref.Name == "" || data[i].Ref.Id == 0 {
-			level.Debug(e.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
+			level.Debug(qc.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
 		} else {
 			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
-				quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
+				qc.quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasCount, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
+				qc.quotasCount, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasSize, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
+				qc.quotasSize, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasSize, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
+				qc.quotasSize, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
 			)
 		}
 	}
-	return true
+	ch <- prometheus.MustNewConstMetric(
+		qc.quotasUp, prometheus.GaugeValue, 1.0,
+	)
+	qc.upChannel <- true
 }
