@@ -70,6 +70,7 @@ type harborOpts struct {
 	timeout  time.Duration
 	insecure bool
 	version  string
+	threads  int
 }
 
 type HarborClient struct {
@@ -226,6 +227,7 @@ func main() {
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&opts.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&opts.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&opts.insecure)
+	kingpin.Flag("exporter.threads", "Size of thread pools per collector").Default("8").IntVar(&opts.threads)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
@@ -245,8 +247,8 @@ func main() {
 		os.Exit(1)
 	}
 	prometheus.MustRegister(NewQuotasCollector(client, logger, exporter.upChannel, opts.instance))
-	prometheus.MustRegister(NewReplicationsCollector(client, logger, exporter.upChannel, opts.instance))
-	prometheus.MustRegister(NewRepositoriesCollector(client, logger, exporter.upChannel, opts.instance))
+	prometheus.MustRegister(NewReplicationsCollector(client, logger, exporter.upChannel, opts.instance, opts.threads))
+	prometheus.MustRegister(NewRepositoriesCollector(client, logger, exporter.upChannel, opts.instance, opts.threads))
 	prometheus.MustRegister(NewScansCollector(client, logger, exporter.upChannel, opts.instance))
 	prometheus.MustRegister(NewStatisticsCollector(client, logger, exporter.upChannel, opts.instance))
 	prometheus.MustRegister(NewSystemVolumesCollector(client, logger, exporter.upChannel, opts.instance))
