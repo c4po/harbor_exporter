@@ -6,6 +6,7 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
+	"time"
 )
 
 type ScansCollector struct {
@@ -14,6 +15,7 @@ type ScansCollector struct {
 	upChannel chan<- bool
 
 	scanUp             *prometheus.Desc
+	scanLatency        *prometheus.Desc
 	scanTotalCount     *prometheus.Desc
 	scanCompletedCount *prometheus.Desc
 	scanRequesterCount *prometheus.Desc
@@ -27,6 +29,11 @@ func NewScansCollector(c *HarborClient, l log.Logger, u chan<- bool, instance st
 		scanUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "scans_up"),
 			"Was the last query of harbor scans successful.",
+			nil, nil,
+		),
+		scanLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "scans_latency"),
+			"Time in seconds to collect scan metrics",
 			nil, nil,
 		),
 		scanTotalCount: prometheus.NewDesc(
@@ -49,13 +56,14 @@ func NewScansCollector(c *HarborClient, l log.Logger, u chan<- bool, instance st
 
 func (sc *ScansCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- sc.scanUp
+	ch <- sc.scanLatency
 	ch <- sc.scanTotalCount
 	ch <- sc.scanCompletedCount
 	ch <- sc.scanRequesterCount
 }
 
 func (sc *ScansCollector) Collect(ch chan<- prometheus.Metric) {
-
+	start := time.Now()
 	type scanMetric struct {
 		Total     float64
 		Completed float64
@@ -86,6 +94,11 @@ func (sc *ScansCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(
 		sc.scanCompletedCount, prometheus.GaugeValue, float64(data.Completed),
+	)
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		sc.scanLatency, prometheus.GaugeValue, latency,
 	)
 	ch <- prometheus.MustNewConstMetric(
 		sc.scanUp, prometheus.GaugeValue, 1.0,

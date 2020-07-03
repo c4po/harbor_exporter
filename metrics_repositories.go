@@ -17,6 +17,7 @@ type RepositoriesCollector struct {
 	threads   int
 
 	repositoryUp          *prometheus.Desc
+	repositoryLatency     *prometheus.Desc
 	repositoriesPullCount *prometheus.Desc
 	repositoriesStarCount *prometheus.Desc
 	repositoriesTagsCount *prometheus.Desc
@@ -31,6 +32,11 @@ func NewRepositoriesCollector(c *HarborClient, l log.Logger, u chan<- bool, inst
 		repositoryUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "repositories_up"),
 			"Was the last query of harbor repositories successful.",
+			nil, nil,
+		),
+		repositoryLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "repositories_latency"),
+			"Time in seconds to collect repository metrics",
 			nil, nil,
 		),
 		repositoriesPullCount: prometheus.NewDesc(
@@ -59,6 +65,7 @@ func (rc *RepositoriesCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (rc *RepositoriesCollector) Collect(ch chan<- prometheus.Metric) {
+	start := time.Now()
 	type projectMetric struct {
 		Project_id  float64
 		Owner_id    float64
@@ -159,6 +166,11 @@ func (rc *RepositoriesCollector) Collect(ch chan<- prometheus.Metric) {
 	projectgroup.Wait()
 	threadgroup.Wait()
 
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		rc.repositoryLatency, prometheus.GaugeValue, latency,
+	)
 	ch <- prometheus.MustNewConstMetric(
 		rc.repositoryUp, prometheus.GaugeValue, 1.0,
 	)

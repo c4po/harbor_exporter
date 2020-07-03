@@ -5,6 +5,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"time"
 )
 
 type SystemVolumesCollector struct {
@@ -12,8 +13,9 @@ type SystemVolumesCollector struct {
 	logger    log.Logger
 	upChannel chan<- bool
 
-	volumesUp     *prometheus.Desc
-	systemVolumes *prometheus.Desc
+	volumesUp      *prometheus.Desc
+	volumesLatency *prometheus.Desc
+	systemVolumes  *prometheus.Desc
 }
 
 func NewSystemVolumesCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *SystemVolumesCollector {
@@ -26,6 +28,11 @@ func NewSystemVolumesCollector(c *HarborClient, l log.Logger, u chan<- bool, ins
 			"Was the last query of harbor system volumes successful.",
 			nil, nil,
 		),
+		volumesLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "system_volumes_latency"),
+			"Time in seconds to collect volumes metrics",
+			nil, nil,
+		),
 		systemVolumes: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "system_volumes_bytes"),
 			"Get system volume info (total/free size).",
@@ -36,10 +43,12 @@ func NewSystemVolumesCollector(c *HarborClient, l log.Logger, u chan<- bool, ins
 
 func (sc *SystemVolumesCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- sc.volumesUp
+	ch <- sc.volumesLatency
 	ch <- sc.systemVolumes
 }
 
 func (sc *SystemVolumesCollector) Collect(ch chan<- prometheus.Metric) {
+	start := time.Now()
 	type systemVolumesMetric struct {
 		Storage struct {
 			Total float64
@@ -66,6 +75,11 @@ func (sc *SystemVolumesCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(
 		sc.volumesUp, prometheus.GaugeValue, 1.0,
+	)
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		sc.volumesLatency, prometheus.GaugeValue, latency,
 	)
 	sc.upChannel <- true
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"time"
 )
 
 type StatisticsCollector struct {
@@ -13,6 +14,7 @@ type StatisticsCollector struct {
 	upChannel chan<- bool
 
 	statsUp      *prometheus.Desc
+	statsLatency *prometheus.Desc
 	projectCount *prometheus.Desc
 	repoCount    *prometheus.Desc
 }
@@ -25,6 +27,11 @@ func NewStatisticsCollector(c *HarborClient, l log.Logger, u chan<- bool, instan
 		statsUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "statistics_up"),
 			"Was the last query of harbor project and repo counts successful.",
+			nil, nil,
+		),
+		statsLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "statistics_latency"),
+			"Time in seconds to collect statistics metrics",
 			nil, nil,
 		),
 		projectCount: prometheus.NewDesc(
@@ -42,11 +49,13 @@ func NewStatisticsCollector(c *HarborClient, l log.Logger, u chan<- bool, instan
 
 func (sc *StatisticsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- sc.statsUp
+	ch <- sc.statsLatency
 	ch <- sc.projectCount
 	ch <- sc.repoCount
 }
 
 func (sc *StatisticsCollector) Collect(ch chan<- prometheus.Metric) {
+	start := time.Now()
 	type statisticsMetric struct {
 		Total_project_count   float64
 		Public_project_count  float64
@@ -95,6 +104,11 @@ func (sc *StatisticsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- prometheus.MustNewConstMetric(
 		sc.statsUp, prometheus.GaugeValue, 1.0,
+	)
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		sc.statsLatency, prometheus.GaugeValue, latency,
 	)
 	sc.upChannel <- true
 }

@@ -25,22 +25,28 @@ make dockerbuild
 | ------ | ------- | ------ |
 |harbor_up| Status of all collectors | |
 |harbor_scans_up| | |
+|harbor_scans_latency| | |
 |harbor_scans_completed | | |
 |harbor_scans_total | | |
 |harbor_scans_requester | | |
 |harbor_statistics_up| | |
+|harbor_statistics_latency| | |
 |harbor_project_count_total| |type=[private_project, public_project, total_project]|
 |harbor_repo_count_total| |type=[private_repo, public_repo, total_repo]|
 |harbor_quotas_up| | |
+|harbor_quotas_latency| | |
 |harbor_quotas_count_total| |repo_id, repo_name, type=[hard, used]|
 |harbor_quotas_size_bytes| | repo_id, repo_name, type=[hard, used]|
 |harbor_system_volumes_up| | |
+|harbor_system_volumes_latency| | |
 |harbor_system_volumes_bytes| |storage=[free, total]|
 |harbor_repositories_up| | |
+|harbor_repositories_latency| | |
 |harbor_repositories_pull_total| |repo_id, repo_name|
 |harbor_repositories_star_total| |repo_id, repo_name|
 |harbor_repositories_tags_total| |repo_id, repo_name|
 |harbor_replication_up| | |
+|harbor_replication_latency| | |
 |harbor_replication_status|status of the last execution of this replication policy: Succeed = 1, any other status = 0|repl_pol_name|
 |harbor_replication_tasks|number of replication tasks, with various results, in the latest execution of this replication policy|repl_pol_name, result=[failed, succeed, in_progress, stopped]|
 

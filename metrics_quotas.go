@@ -14,9 +14,10 @@ type QuotasCollector struct {
 	logger    log.Logger
 	upChannel chan<- bool
 
-	quotasUp    *prometheus.Desc
-	quotasCount *prometheus.Desc
-	quotasSize  *prometheus.Desc
+	quotasUp      *prometheus.Desc
+	quotasLatency *prometheus.Desc
+	quotasCount   *prometheus.Desc
+	quotasSize    *prometheus.Desc
 }
 
 func NewQuotasCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *QuotasCollector {
@@ -27,6 +28,11 @@ func NewQuotasCollector(c *HarborClient, l log.Logger, u chan<- bool, instance s
 		quotasUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "quotas_up"),
 			"Was the last query of harbor quotas successful.",
+			nil, nil,
+		),
+		quotasLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "quotas_latency"),
+			"Time in seconds to collect quota metrics",
 			nil, nil,
 		),
 		quotasCount: prometheus.NewDesc(
@@ -44,12 +50,13 @@ func NewQuotasCollector(c *HarborClient, l log.Logger, u chan<- bool, instance s
 
 func (qc *QuotasCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- qc.quotasUp
+	ch <- qc.quotasLatency
 	ch <- qc.quotasCount
 	ch <- qc.quotasSize
 }
 
 func (qc *QuotasCollector) Collect(ch chan<- prometheus.Metric) {
-
+	start := time.Now()
 	type quotaMetric []struct {
 		Id  float64
 		Ref struct {
@@ -101,6 +108,11 @@ func (qc *QuotasCollector) Collect(ch chan<- prometheus.Metric) {
 			)
 		}
 	}
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		qc.quotasLatency, prometheus.GaugeValue, latency,
+	)
 	ch <- prometheus.MustNewConstMetric(
 		qc.quotasUp, prometheus.GaugeValue, 1.0,
 	)

@@ -5,6 +5,7 @@ import (
 	"github.com/go-kit/kit/log"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,9 +17,10 @@ type ReplicationsCollector struct {
 	upChannel chan<- bool
 	threads   int
 
-	replicationUp     *prometheus.Desc
-	replicationStatus *prometheus.Desc
-	replicationTasks  *prometheus.Desc
+	replicationUp      *prometheus.Desc
+	replicationLatency *prometheus.Desc
+	replicationStatus  *prometheus.Desc
+	replicationTasks   *prometheus.Desc
 }
 
 func NewReplicationsCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string, threads int) *ReplicationsCollector {
@@ -30,6 +32,11 @@ func NewReplicationsCollector(c *HarborClient, l log.Logger, u chan<- bool, inst
 		replicationUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "replication_up"),
 			"Was the last query of harbor replications successful.",
+			nil, nil,
+		),
+		replicationLatency: prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, instance, "replication_latency"),
+			"Time in seconds to collect replication metrics",
 			nil, nil,
 		),
 		replicationStatus: prometheus.NewDesc(
@@ -47,11 +54,13 @@ func NewReplicationsCollector(c *HarborClient, l log.Logger, u chan<- bool, inst
 
 func (rc *ReplicationsCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- rc.replicationUp
+	ch <- rc.replicationLatency
 	ch <- rc.replicationStatus
 	ch <- rc.replicationTasks
 }
 
 func (rc *ReplicationsCollector) Collect(ch chan<- prometheus.Metric) {
+	start := time.Now()
 	type policiesMetric struct {
 		Id   float64
 		Name string
@@ -147,6 +156,12 @@ func (rc *ReplicationsCollector) Collect(ch chan<- prometheus.Metric) {
 
 	policygroup.Wait()
 	threadgroup.Wait()
+
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		rc.replicationLatency, prometheus.GaugeValue, latency,
+	)
 	ch <- prometheus.MustNewConstMetric(
 		rc.replicationUp, prometheus.GaugeValue, 1.0,
 	)
