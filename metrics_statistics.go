@@ -8,19 +8,19 @@ import (
 )
 
 type StatisticsCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
 
-	statsUp *prometheus.Desc
+	statsUp      *prometheus.Desc
 	projectCount *prometheus.Desc
-	repoCount *prometheus.Desc
+	repoCount    *prometheus.Desc
 }
 
 func NewStatisticsCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *StatisticsCollector {
 	return &StatisticsCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
 		statsUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "statistics_up"),

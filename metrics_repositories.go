@@ -11,12 +11,12 @@ import (
 )
 
 type RepositoriesCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
-	threads int
+	threads   int
 
-	repositoryUp *prometheus.Desc
+	repositoryUp          *prometheus.Desc
 	repositoriesPullCount *prometheus.Desc
 	repositoriesStarCount *prometheus.Desc
 	repositoriesTagsCount *prometheus.Desc
@@ -24,12 +24,12 @@ type RepositoriesCollector struct {
 
 func NewRepositoriesCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string, threads int) *RepositoriesCollector {
 	return &RepositoriesCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
-		threads: threads,
+		threads:   threads,
 		repositoryUp: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, instance, "repository_up"),
+			prometheus.BuildFQName(namespace, instance, "repositories_up"),
 			"Was the last query of harbor repositories successful.",
 			nil, nil,
 		),
@@ -38,7 +38,7 @@ func NewRepositoriesCollector(c *HarborClient, l log.Logger, u chan<- bool, inst
 			"Get public repositories which are accessed most.).",
 			[]string{"repo_name", "repo_id"}, nil,
 		),
-			repositoriesStarCount: prometheus.NewDesc(
+		repositoriesStarCount: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "repositories_star_total"),
 			"Get public repositories which are accessed most.).",
 			[]string{"repo_name", "repo_id"}, nil,
@@ -115,37 +115,38 @@ func (rc *RepositoriesCollector) Collect(ch chan<- prometheus.Metric) {
 			for {
 				exit := false
 				select {
-					case project := <- projectChan:
-						projectId := strconv.FormatFloat(project.Project_id, 'f', 0, 32)
+				case project := <-projectChan:
 
-						body := rc.client.request("/repositories?project_id=" + projectId)
-						var data repositoriesMetric
+					projectId := strconv.FormatFloat(project.Project_id, 'f', 0, 32)
 
-						if err := json.Unmarshal(body, &data); err != nil {
-							level.Error(rc.logger).Log(err.Error())
-							ch <- prometheus.MustNewConstMetric(
-								rc.repositoryUp, prometheus.GaugeValue, 0.0,
-							)
-							rc.upChannel <- false
-							return
-						}
+					body := rc.client.request("/repositories?project_id=" + projectId)
+					var data repositoriesMetric
 
-						for i := range data {
-							repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
-							ch <- prometheus.MustNewConstMetric(
-								rc.repositoriesPullCount, prometheus.GaugeValue, data[i].Pull_count, data[i].Name, repoId,
-							)
-							ch <- prometheus.MustNewConstMetric(
-								rc.repositoriesStarCount, prometheus.GaugeValue, data[i].Star_count, data[i].Name, repoId,
-							)
-							ch <- prometheus.MustNewConstMetric(
-								rc.repositoriesTagsCount, prometheus.GaugeValue, data[i].Tags_count, data[i].Name, repoId,
-							)
-						}
-						projectgroup.Done()
-					default:
-						exit = true
-						break
+					if err := json.Unmarshal(body, &data); err != nil {
+						level.Error(rc.logger).Log(err.Error())
+						ch <- prometheus.MustNewConstMetric(
+							rc.repositoryUp, prometheus.GaugeValue, 0.0,
+						)
+						rc.upChannel <- false
+						return
+					}
+
+					for i := range data {
+						repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
+						ch <- prometheus.MustNewConstMetric(
+							rc.repositoriesPullCount, prometheus.GaugeValue, data[i].Pull_count, data[i].Name, repoId,
+						)
+						ch <- prometheus.MustNewConstMetric(
+							rc.repositoriesStarCount, prometheus.GaugeValue, data[i].Star_count, data[i].Name, repoId,
+						)
+						ch <- prometheus.MustNewConstMetric(
+							rc.repositoriesTagsCount, prometheus.GaugeValue, data[i].Tags_count, data[i].Name, repoId,
+						)
+					}
+					projectgroup.Done()
+				default:
+					exit = true
+					break
 				}
 				if exit {
 					break

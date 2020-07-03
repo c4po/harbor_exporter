@@ -10,19 +10,19 @@ import (
 )
 
 type QuotasCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
 
-	quotasUp *prometheus.Desc
+	quotasUp    *prometheus.Desc
 	quotasCount *prometheus.Desc
-	quotasSize *prometheus.Desc
+	quotasSize  *prometheus.Desc
 }
 
 func NewQuotasCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *QuotasCollector {
 	return &QuotasCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
 		quotasUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "quotas_up"),

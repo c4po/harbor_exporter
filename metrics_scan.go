@@ -9,23 +9,23 @@ import (
 )
 
 type ScansCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
 
-	scanUp *prometheus.Desc
-	scanTotalCount *prometheus.Desc
+	scanUp             *prometheus.Desc
+	scanTotalCount     *prometheus.Desc
 	scanCompletedCount *prometheus.Desc
 	scanRequesterCount *prometheus.Desc
 }
 
 func NewScansCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *ScansCollector {
 	return &ScansCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
 		scanUp: prometheus.NewDesc(
-			prometheus.BuildFQName(namespace, instance, "scan_up"),
+			prometheus.BuildFQName(namespace, instance, "scans_up"),
 			"Was the last query of harbor scans successful.",
 			nil, nil,
 		),

@@ -11,22 +11,22 @@ import (
 )
 
 type ReplicationsCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
-	threads int
+	threads   int
 
-	replicationUp *prometheus.Desc
+	replicationUp     *prometheus.Desc
 	replicationStatus *prometheus.Desc
-	replicationTasks *prometheus.Desc
+	replicationTasks  *prometheus.Desc
 }
 
 func NewReplicationsCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string, threads int) *ReplicationsCollector {
 	return &ReplicationsCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
-		threads: threads,
+		threads:   threads,
 		replicationUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "replication_up"),
 			"Was the last query of harbor replications successful.",
@@ -93,7 +93,7 @@ func (rc *ReplicationsCollector) Collect(ch chan<- prometheus.Metric) {
 			for {
 				exit := false
 				select {
-				case policy := <- policyChan:
+				case policy := <-policyChan:
 
 					policyId := strconv.FormatFloat(policy.Id, 'f', 0, 32)
 					policyName := policy.Name

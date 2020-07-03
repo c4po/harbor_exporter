@@ -8,18 +8,18 @@ import (
 )
 
 type SystemVolumesCollector struct {
-	client *HarborClient
-	logger log.Logger
+	client    *HarborClient
+	logger    log.Logger
 	upChannel chan<- bool
 
-	volumesUp *prometheus.Desc
+	volumesUp     *prometheus.Desc
 	systemVolumes *prometheus.Desc
 }
 
 func NewSystemVolumesCollector(c *HarborClient, l log.Logger, u chan<- bool, instance string) *SystemVolumesCollector {
 	return &SystemVolumesCollector{
-		client: c,
-		logger: l,
+		client:    c,
+		logger:    l,
 		upChannel: u,
 		volumesUp: prometheus.NewDesc(
 			prometheus.BuildFQName(namespace, instance, "system_volumes_up"),
