@@ -159,14 +159,27 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 	}
 
 	resp, err := client.Get(uri + "/api/systeminfo")
-	level.Info(logger).Log("check v1 with /api/systeminfo: ", resp.StatusCode)
-	if resp.StatusCode == 200 {
-		opts.version = "/api"
+	if err == nil {
+		level.Info(logger).Log("msg", "check v1 with /api/systeminfo", "code", resp.StatusCode)
+		if resp.StatusCode == 200 {
+			opts.version = "/api"
+		}
+	} else {
+		level.Info(logger).Log("msg", "check v1 with /api/systeminfo", "err", err)
 	}
+
 	resp, err = client.Get(uri + "/api/v2.0/systeminfo")
-	level.Info(logger).Log("check v2: with /api/v2.0/systeminfo", resp.StatusCode)
-	if resp.StatusCode == 200 {
-		opts.version = "/api/v2.0"
+	if err == nil {
+		level.Info(logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "code", resp.StatusCode)
+		if resp.StatusCode == 200 {
+			opts.version = "/api/v2.0"
+		}
+	} else {
+		level.Info(logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "erro", err)
+	}
+
+	if opts.version == "" {
+		return nil, fmt.Errorf("unable to determine harbor version")
 	}
 
 	hc := HarborClient{client, opts, logger}
