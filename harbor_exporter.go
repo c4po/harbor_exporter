@@ -57,6 +57,9 @@ var (
 	repositoriesPullCount,
 	repositoriesStarCount,
 	repositoriesTagsCount,
+	scanTotal,
+	scanFixable,
+	scanSeverity,
 	replicationStatus,
 	replicationTasks *prometheus.Desc
 )
@@ -84,7 +87,6 @@ type harborOpts struct {
 	password string
 	timeout  time.Duration
 	insecure bool
-	version  string
 }
 
 type HarborClient struct {
@@ -94,11 +96,12 @@ type HarborClient struct {
 }
 
 func (h HarborClient) request(endpoint string) []byte {
-	req, err := http.NewRequest("GET", h.opts.uri+h.opts.version+endpoint, nil)
+	req, err := http.NewRequest("GET", h.opts.uri+endpoint, nil)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
 		return nil
 	}
+	req.Header.Set("accept", "application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0")
 	req.SetBasicAuth(h.opts.username, h.opts.password)
 
 	resp, err := h.client.Do(req)
@@ -106,8 +109,6 @@ func (h HarborClient) request(endpoint string) []byte {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil
 	}
-	defer resp.Body.Close()
-
 	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
 		return nil
@@ -154,31 +155,6 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 	client := &http.Client{
 		Transport: transport,
 	}
-
-	resp, err := client.Get(uri + "/api/systeminfo")
-	if err == nil {
-		level.Info(logger).Log("msg", "check v1 with /api/systeminfo", "code", resp.StatusCode)
-		if resp.StatusCode == 200 {
-			opts.version = "/api"
-		}
-	} else {
-		level.Info(logger).Log("msg", "check v1 with /api/systeminfo", "err", err)
-	}
-
-	resp, err = client.Get(uri + "/api/v2.0/systeminfo")
-	if err == nil {
-		level.Info(logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "code", resp.StatusCode)
-		if resp.StatusCode == 200 {
-			opts.version = "/api/v2.0"
-		}
-	} else {
-		level.Info(logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "erro", err)
-	}
-
-	if opts.version == "" {
-		return nil, fmt.Errorf("unable to determine harbor version")
-	}
-
 	hc := HarborClient{client, opts, logger}
 
 	// Init Prometheus Descriptors
@@ -242,6 +218,12 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 		"Get public repositories which are accessed most.).",
 		[]string{"repo_name", "repo_id"}, nil,
 	)
+
+	scanSeverity = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, opts.instance, "repositories_scan_severity"),
+		"Get scan report Severity.).",
+		[]string{"image_name", "repo_id"}, nil,
+	)
 	replicationStatus = prometheus.NewDesc(
 		prometheus.BuildFQName(namespace, opts.instance, "replication_status"),
 		"Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.",
@@ -266,6 +248,7 @@ func NewExporter(opts harborOpts, logger log.Logger) (*Exporter, error) {
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 	ch <- up
 	ch <- scanTotalCount
+	ch <- scanSeverity
 	ch <- scanCompletedCount
 	ch <- scanRequesterCount
 	ch <- projectCount
