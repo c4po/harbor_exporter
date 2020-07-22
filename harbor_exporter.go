@@ -287,7 +287,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok = e.collectStatisticsMetric(ch) && ok
 	ok = e.collectQuotasMetric(ch) && ok
 	ok = e.collectSystemVolumesMetric(ch) && ok
-	ok = e.collectRepositoriesMetric(ch) && ok
+	ok = e.collectRepositoriesMetric(ch, e.opts.version) && ok
 	ok = e.collectReplicationsMetric(ch) && ok
 
 	if ok {
