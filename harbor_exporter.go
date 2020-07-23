@@ -85,6 +85,7 @@ type harborOpts struct {
 	timeout  time.Duration
 	insecure bool
 	version  string
+	pageSize int
 }
 
 type HarborClient struct {
@@ -285,10 +286,10 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	ok := e.collectScanMetric(ch)
 	ok = e.collectStatisticsMetric(ch) && ok
-	ok = e.collectQuotasMetric(ch) && ok
+	ok = e.collectQuotasMetric(ch, e.opts.pageSize) && ok
 	ok = e.collectSystemVolumesMetric(ch) && ok
-	ok = e.collectRepositoriesMetric(ch, e.opts.version) && ok
-	ok = e.collectReplicationsMetric(ch) && ok
+	ok = e.collectRepositoriesMetric(ch, e.opts.version, e.opts.pageSize) && ok
+	ok = e.collectReplicationsMetric(ch, e.opts.pageSize) && ok
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
@@ -318,6 +319,7 @@ func main() {
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&opts.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&opts.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&opts.insecure)
+	kingpin.Flag("harbor.page.size", "Page size on requests to the harbor API.").Default("10").IntVar(&opts.pageSize)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
