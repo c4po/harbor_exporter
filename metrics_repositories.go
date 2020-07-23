@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/go-kit/kit/log/level"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
+
+	"github.com/go-kit/kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
+func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, version string) bool {
 	type projectsMetrics []struct {
 		Project_id  float64
 		Owner_id    float64
@@ -48,8 +49,11 @@ func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 
 	for i := range projectsData {
 		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
-
-		body := e.client.request("/repositories?project_id=" + projectId)
+		url := "/repositories?project_id=" + projectId
+		if version == "/api/v2.0" {
+			url = "/projects/" + projectsData[i].Name + "/repositories"
+		}
+		body := e.client.request(url)
 		var data repositoriesMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {
