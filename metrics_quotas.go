@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
+func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 
 	type quotaMetric []struct {
 		Id  float64
@@ -28,7 +28,7 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			Storage float64
 		}
 	}
-	body := e.client.request("/quotas")
+	body, _ := e.request("/quotas")
 	var data quotaMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -44,16 +44,16 @@ func (e *Exporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		} else {
 			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
-				quotasCount, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
+				allMetrics["quotas_count_total"].Desc, allMetrics["quotas_count_total"].Type, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasCount, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
+				allMetrics["quotas_count_total"].Desc, allMetrics["quotas_count_total"].Type, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasSize, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
+				allMetrics["quotas_size_bytes"].Desc, allMetrics["quotas_size_bytes"].Type, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				quotasSize, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
+				allMetrics["quotas_size_bytes"].Desc, allMetrics["quotas_size_bytes"].Type, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
 			)
 		}
 	}

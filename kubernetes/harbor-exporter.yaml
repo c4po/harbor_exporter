@@ -40,15 +40,15 @@ spec:
         runAsUser: 1000
       containers:
         - name: harbor-exporter
-          image: "c4po/harbor-exporter"
-          imagePullPolicy: IfNotPresent
+          image: "c4po/harbor-exporter:debug"
+          imagePullPolicy: Always
           env:
 ##          necessary in case you monitor multiple Harbor instances in your Prometheus
 #            - name: HARBOR_INSTANCE
 #              value: my_harbor
             - name: HARBOR_URI
 ##            name of the Service for harbor-core
-              value: http://prefix-harbor-core # change prefix to the name of your Helm release
+              value: http://harbor-core.harbor # change prefix to the name of your Helm release
 ##            optionally use below construction to address the external endpoint of Harbor
 #              valueFrom:
 #                configMapKeyRef:
@@ -59,7 +59,7 @@ spec:
             - name: HARBOR_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: prefix-harbor-core # change prefix to the name of your Helm release
+                  name: harbor-core # change prefix to the name of your Helm release
                   key: HARBOR_ADMIN_PASSWORD
 
           securityContext:
@@ -111,7 +111,7 @@ kind: ServiceMonitor
 metadata:
   name: harbor-exporter
   labels:
-    app: harbor-exporter
+    release: mgmt
 spec:
   endpoints:
   - interval: 10s
@@ -120,10 +120,9 @@ spec:
     port: http
     path: /metrics
     scheme: http
-  jobLabel: "mgmt"
   selector:
     matchLabels:
       app: harbor-exporter
-    namespaceSelector:
-      matchNames:
-      - harbor # change to the namespace where you deployed Harbor
+  namespaceSelector:
+    matchNames:
+    - harbor # change to the namespace where you deployed Harbor

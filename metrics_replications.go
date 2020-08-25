@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
+func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	type policiesMetrics []struct {
 		Id   float64
 		Name string
@@ -23,7 +23,7 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 
-	policiesBody := e.client.request("/replication/policies")
+	policiesBody, _ := e.request("/replication/policies")
 	var policiesData policiesMetrics
 
 	if err := json.Unmarshal(policiesBody, &policiesData); err != nil {
@@ -35,7 +35,7 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 		policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
 		policyName := policiesData[i].Name
 
-		body := e.client.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
+		body, _ := e.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
 		var data policyMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {
@@ -50,19 +50,19 @@ func (e *Exporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 				replStatus = 1
 			}
 			ch <- prometheus.MustNewConstMetric(
-				replicationStatus, prometheus.GaugeValue, replStatus, policyName,
+				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationTasks, prometheus.GaugeValue, data[i].Failed, policyName, "failed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationTasks, prometheus.GaugeValue, data[i].Succeed, policyName, "succeed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationTasks, prometheus.GaugeValue, data[i].In_progress, policyName, "in_progress",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				replicationTasks, prometheus.GaugeValue, data[i].Stopped, policyName, "stopped",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
 			)
 		}
 	}

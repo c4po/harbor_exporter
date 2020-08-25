@@ -7,7 +7,7 @@ import (
 	"strconv"
 )
 
-func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
+func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 
 	type scanMetric struct {
 		Total     float64
@@ -16,7 +16,7 @@ func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		Requester string
 		Ongoing   bool
 	}
-	body := e.client.request("/scans/all/metrics")
+	body, _ := e.request("/scans/all/metrics")
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
@@ -26,15 +26,15 @@ func (e *Exporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 
 	scan_requester, _ := strconv.ParseFloat(data.Requester, 64)
 	ch <- prometheus.MustNewConstMetric(
-		scanRequesterCount, prometheus.GaugeValue, float64(scan_requester),
+		allMetrics["scans_requester"].Desc, allMetrics["scans_requester"].Type, float64(scan_requester),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		scanTotalCount, prometheus.GaugeValue, float64(data.Total),
+		allMetrics["scans_total"].Desc, allMetrics["scans_total"].Type, float64(data.Total),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		scanCompletedCount, prometheus.GaugeValue, float64(data.Completed),
+		allMetrics["scans_completed"].Desc, allMetrics["scans_completed"].Type, float64(data.Completed),
 	)
 	return true
 }
