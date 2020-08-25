@@ -44,16 +44,16 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		} else {
 			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["quotas_count_total"].Desc, prometheus.GaugeValue, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
+				allMetrics["quotas_count_total"].Desc, allMetrics["quotas_count_total"].Type, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["quotas_count_total"].Desc, prometheus.GaugeValue, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
+				allMetrics["quotas_count_total"].Desc, allMetrics["quotas_count_total"].Type, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["quotas_size_bytes"].Desc, prometheus.GaugeValue, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
+				allMetrics["quotas_size_bytes"].Desc, allMetrics["quotas_size_bytes"].Type, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["quotas_size_bytes"].Desc, prometheus.GaugeValue, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
+				allMetrics["quotas_size_bytes"].Desc, allMetrics["quotas_size_bytes"].Type, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
 			)
 		}
 	}

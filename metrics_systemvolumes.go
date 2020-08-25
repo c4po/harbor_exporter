@@ -21,10 +21,10 @@ func (e *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric)
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, prometheus.GaugeValue, data.Storage.Total, "total",
+		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Total, "total",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, prometheus.GaugeValue, data.Storage.Free, "free",
+		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Free, "free",
 	)
 
 	return true

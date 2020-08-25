@@ -103,8 +103,9 @@ type HarborExporter struct {
 	password string
 	timeout  time.Duration
 	insecure bool
-	version  string
+	apiPath  string
 	logger   log.Logger
+	isV2     bool
 }
 
 func getHttpClient(skipVerify bool) (*http.Client, error) {
@@ -129,7 +130,7 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 }
 
 func (h HarborExporter) request(endpoint string) ([]byte, error) {
-	req, err := http.NewRequest("GET", h.uri+h.version+endpoint, nil)
+	req, err := http.NewRequest("GET", h.uri+h.apiPath+endpoint, nil)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
 		return nil, err
@@ -173,7 +174,8 @@ func checkHarborVersion(h *HarborExporter) error {
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
-			h.version = "/api"
+			h.apiPath = "/api"
+			h.isV2 = false
 		}
 	} else {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "err", err)
@@ -183,13 +185,14 @@ func checkHarborVersion(h *HarborExporter) error {
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
-			h.version = "/api/v2.0"
+			h.apiPath = "/api/v2.0"
+			h.isV2 = true
 		}
 	} else {
 		level.Info(h.logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "erro", err)
 	}
 
-	if h.version == "" {
+	if h.apiPath == "" {
 		return errors.New("unable to determine harbor version")
 	}
 	return nil
@@ -210,7 +213,7 @@ func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
 	ok = e.collectStatisticsMetric(ch) && ok
 	ok = e.collectQuotasMetric(ch) && ok
 	ok = e.collectSystemVolumesMetric(ch) && ok
-	ok = e.collectRepositoriesMetric(ch, e.version) && ok
+	ok = e.collectRepositoriesMetric(ch) && ok
 	ok = e.collectReplicationsMetric(ch) && ok
 
 	if ok {
@@ -224,10 +227,6 @@ func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
 			0.0,
 		)
 	}
-}
-
-func init() {
-	prometheus.MustRegister(version.NewCollector("harbor_exporter"))
 }
 
 func main() {

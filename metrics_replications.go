@@ -50,19 +50,19 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 				replStatus = 1
 			}
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_status"].Desc, prometheus.GaugeValue, replStatus, policyName,
+				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, prometheus.GaugeValue, data[i].Failed, policyName, "failed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, prometheus.GaugeValue, data[i].Succeed, policyName, "succeed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, prometheus.GaugeValue, data[i].In_progress, policyName, "in_progress",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, prometheus.GaugeValue, data[i].Stopped, policyName, "stopped",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
 			)
 		}
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, version string) bool {
+func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 	type projectsMetrics []struct {
 		Project_id  float64
 		Owner_id    float64
@@ -41,6 +41,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, 
 	}
 	projectsBody, _ := e.request("/projects")
 	var projectsData projectsMetrics
+	var url string
 
 	if err := json.Unmarshal(projectsBody, &projectsData); err != nil {
 		level.Error(e.logger).Log(err.Error())
@@ -49,9 +50,10 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, 
 
 	for i := range projectsData {
 		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
-		url := "/repositories?project_id=" + projectId
-		if version == "/api/v2.0" {
+		if e.isV2 {
 			url = "/projects/" + projectsData[i].Name + "/repositories"
+		} else {
+			url = "/repositories?project_id=" + projectId
 		}
 		body, _ := e.request(url)
 		var data repositoriesMetric
@@ -64,13 +66,13 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, 
 		for i := range data {
 			repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["repositories_pull_total"].Desc, prometheus.GaugeValue, data[i].Pull_count, data[i].Name, repoId,
+				allMetrics["repositories_pull_total"].Desc, allMetrics["repositories_pull_total"].Type, data[i].Pull_count, data[i].Name, repoId,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["repositories_star_total"].Desc, prometheus.GaugeValue, data[i].Star_count, data[i].Name, repoId,
+				allMetrics["repositories_star_total"].Desc, allMetrics["repositories_star_total"].Type, data[i].Star_count, data[i].Name, repoId,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["repositories_tags_total"].Desc, prometheus.GaugeValue, data[i].Tags_count, data[i].Name, repoId,
+				allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].Tags_count, data[i].Name, repoId,
 			)
 		}
 	}

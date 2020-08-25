@@ -26,15 +26,15 @@ func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 
 	scan_requester, _ := strconv.ParseFloat(data.Requester, 64)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["scans_requester"].Desc, prometheus.GaugeValue, float64(scan_requester),
+		allMetrics["scans_requester"].Desc, allMetrics["scans_requester"].Type, float64(scan_requester),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["scans_total"].Desc, prometheus.GaugeValue, float64(data.Total),
+		allMetrics["scans_total"].Desc, allMetrics["scans_total"].Type, float64(data.Total),
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["scans_completed"].Desc, prometheus.GaugeValue, float64(data.Completed),
+		allMetrics["scans_completed"].Desc, allMetrics["scans_completed"].Type, float64(data.Completed),
 	)
 	return true
 }
