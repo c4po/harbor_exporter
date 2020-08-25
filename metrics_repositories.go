@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, version string) bool {
+func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, version string) bool {
 	type projectsMetrics []struct {
 		Project_id  float64
 		Owner_id    float64
@@ -39,7 +39,7 @@ func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, versio
 			Update_time   time.Time
 		}
 	}
-	projectsBody := e.client.request("/projects")
+	projectsBody, _ := e.request("/projects")
 	var projectsData projectsMetrics
 
 	if err := json.Unmarshal(projectsBody, &projectsData); err != nil {
@@ -53,7 +53,7 @@ func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, versio
 		if version == "/api/v2.0" {
 			url = "/projects/" + projectsData[i].Name + "/repositories"
 		}
-		body := e.client.request(url)
+		body, _ := e.request(url)
 		var data repositoriesMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {
@@ -64,13 +64,13 @@ func (e *Exporter) collectRepositoriesMetric(ch chan<- prometheus.Metric, versio
 		for i := range data {
 			repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
-				repositoriesPullCount, prometheus.GaugeValue, data[i].Pull_count, data[i].Name, repoId,
+				allMetrics["repositories_pull_total"].Desc, prometheus.GaugeValue, data[i].Pull_count, data[i].Name, repoId,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				repositoriesStarCount, prometheus.GaugeValue, data[i].Star_count, data[i].Name, repoId,
+				allMetrics["repositories_star_total"].Desc, prometheus.GaugeValue, data[i].Star_count, data[i].Name, repoId,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				repositoriesTagsCount, prometheus.GaugeValue, data[i].Tags_count, data[i].Name, repoId,
+				allMetrics["repositories_tags_total"].Desc, prometheus.GaugeValue, data[i].Tags_count, data[i].Name, repoId,
 			)
 		}
 	}

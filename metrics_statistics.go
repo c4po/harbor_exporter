@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
+func (e *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 
 	type statisticsMetric struct {
 		Total_project_count   float64
@@ -17,7 +17,7 @@ func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 		Private_repo_count    float64
 	}
 
-	body := e.client.request("/statistics")
+	body, _ := e.request("/statistics")
 
 	var data statisticsMetric
 
@@ -27,27 +27,27 @@ func (e *Exporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		projectCount, prometheus.GaugeValue, data.Total_project_count, "total_project",
+		allMetrics["project_count_total"].Desc, prometheus.GaugeValue, data.Total_project_count, "total_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		projectCount, prometheus.GaugeValue, data.Public_project_count, "public_project",
+		allMetrics["project_count_total"].Desc, prometheus.GaugeValue, data.Public_project_count, "public_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		projectCount, prometheus.GaugeValue, data.Private_project_count, "private_project",
+		allMetrics["project_count_total"].Desc, prometheus.GaugeValue, data.Private_project_count, "private_project",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		repoCount, prometheus.GaugeValue, data.Public_repo_count, "public_repo",
+		allMetrics["repo_count_total"].Desc, prometheus.GaugeValue, data.Public_repo_count, "public_repo",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		repoCount, prometheus.GaugeValue, data.Total_repo_count, "total_repo",
+		allMetrics["repo_count_total"].Desc, prometheus.GaugeValue, data.Total_repo_count, "total_repo",
 	)
 
 	ch <- prometheus.MustNewConstMetric(
-		repoCount, prometheus.GaugeValue, data.Private_repo_count, "private_repo",
+		allMetrics["repo_count_total"].Desc, prometheus.GaugeValue, data.Private_repo_count, "private_repo",
 	)
 
 	return true
