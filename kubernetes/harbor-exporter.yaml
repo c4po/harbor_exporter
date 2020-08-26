@@ -42,6 +42,13 @@ spec:
         - name: harbor-exporter
           image: "c4po/harbor-exporter:debug"
           imagePullPolicy: Always
+# skip metrics can only provide through command line
+          # command:
+          # - /bin/harbor_exporter
+          # - --skip.metrics
+          # - "scans"
+          # - --skip.metrics
+          # - "quotas"
           env:
 ##          necessary in case you monitor multiple Harbor instances in your Prometheus
 #            - name: HARBOR_INSTANCE

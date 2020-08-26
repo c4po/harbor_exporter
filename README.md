@@ -46,6 +46,12 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ./harbor_exporter --help
 ```
 
+* `skip.metrics` - (Optional) value can be `scans|statistics|quotas|repositories|replication`
+example:
+```
+./harbor_exporter --skip.metrics scans --skip.metrics quotas
+```
+
 ### Environment variables
 Below environment variables can be used instead of the corresponding flags. Easy when running the exporter in a container.
 

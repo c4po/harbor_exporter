@@ -21,7 +21,7 @@ dockerbuild:
 dockerpush:
 	docker push c4po/harbor-exporter
 
-lint:
+fmt:
 	go mod tidy
 	gofmt -s -w .
 # 	golangci-lint run ./
