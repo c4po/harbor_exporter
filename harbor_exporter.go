@@ -125,6 +125,7 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 	}
 	client := &http.Client{
 		Transport: transport,
+		Timeout:   time.Second * 10,
 	}
 	return client, nil
 }
