@@ -38,10 +38,28 @@ import (
 
 const (
 	namespace = "harbor"
+
+	//These are metricsGroup enum values
+	metricsGroupScans        = "scans"
+	metricsGroupStatistics   = "statistics"
+	metricsGroupQuotas       = "quotas"
+	metricsGroupRepositories = "repositories"
+	metricsGroupReplication  = "replication"
 )
 
+func MetricsGroup_Values() []string {
+	return []string{
+		metricsGroupScans,
+		metricsGroupStatistics,
+		metricsGroupQuotas,
+		metricsGroupRepositories,
+		metricsGroupReplication,
+	}
+}
+
 var (
-	allMetrics map[string]metricInfo
+	allMetrics          map[string]metricInfo
+	collectMetricsGroup map[string]bool
 
 	typeLabelNames            = []string{"type"}
 	quotaLabelNames           = []string{"type", "repo_name", "repo_id"}
@@ -210,12 +228,25 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
-	ok := e.collectScanMetric(ch)
-	ok = e.collectStatisticsMetric(ch) && ok
-	ok = e.collectQuotasMetric(ch) && ok
-	ok = e.collectSystemVolumesMetric(ch) && ok
-	ok = e.collectRepositoriesMetric(ch) && ok
-	ok = e.collectReplicationsMetric(ch) && ok
+	ok := true
+	if collectMetricsGroup[metricsGroupScans] {
+		ok = e.collectScanMetric(ch) && ok
+	}
+	if collectMetricsGroup[metricsGroupStatistics] {
+		ok = e.collectStatisticsMetric(ch) && ok
+	}
+	if collectMetricsGroup[metricsGroupStatistics] {
+		ok = e.collectSystemVolumesMetric(ch) && ok
+	}
+	if collectMetricsGroup[metricsGroupQuotas] {
+		ok = e.collectQuotasMetric(ch) && ok
+	}
+	if collectMetricsGroup[metricsGroupRepositories] {
+		ok = e.collectRepositoriesMetric(ch) && ok
+	}
+	if collectMetricsGroup[metricsGroupReplication] {
+		ok = e.collectReplicationsMetric(ch) && ok
+	}
 
 	if ok {
 		ch <- prometheus.MustNewConstMetric(
@@ -237,12 +268,14 @@ func main() {
 
 		harborInstance = &HarborExporter{}
 	)
+
 	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&harborInstance.instance)
 	kingpin.Flag("harbor.server", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)").Envar("HARBOR_URI").Default("http://localhost:8500").StringVar(&harborInstance.uri)
 	kingpin.Flag("harbor.username", "username").Envar("HARBOR_USERNAME").Default("admin").StringVar(&harborInstance.username)
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
+	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
@@ -252,6 +285,18 @@ func main() {
 
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
+
+	collectMetricsGroup = make(map[string]bool)
+	for _, v := range MetricsGroup_Values() {
+		collectMetricsGroup[v] = true
+	}
+	for _, v := range *skip {
+		level.Debug(logger).Log("skip", v)
+		collectMetricsGroup[v] = false
+	}
+	for k, v := range collectMetricsGroup {
+		level.Info(logger).Log("metrics_group", k, "collect", v)
+	}
 
 	harborInstance.logger = logger
 
@@ -267,19 +312,7 @@ func main() {
 	prometheus.MustRegister(version.NewCollector("harbor_exporter"))
 
 	http.Handle(*metricsPath, promhttp.Handler())
-	// http.Handle(*metricsPath,
-	// 	promhttp.InstrumentMetricHandler(
-	// 		prometheus.DefaultRegisterer,
-	// 		promhttp.HandlerFor(
-	// 			prometheus.DefaultGatherer,
-	// 			promhttp.HandlerOpts{
-	// 				ErrorLog: &promHTTPLogger{
-	// 					logger: logger,
-	// 				},
-	// 			},
-	// 		),
-	// 	),
-	// )
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
              <head><title>Harbor Exporter</title></head>
