@@ -22,7 +22,9 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"sync"
 	"time"
+
 	// "strings"
 	// "net/url"
 
@@ -124,6 +126,21 @@ type HarborExporter struct {
 	apiPath  string
 	logger   log.Logger
 	isV2     bool
+	// Cache-releated
+	cacheEnabled    bool
+	cacheDuration   time.Duration
+	lastCollectTime time.Time
+	cache           []prometheus.Metric
+	collectMutex    sync.Mutex
+}
+
+// NewHarborExporter constructs a HarborExporter instance
+func NewHarborExporter() *HarborExporter {
+	return &HarborExporter{
+		cache:           make([]prometheus.Metric, 0),
+		lastCollectTime: time.Unix(0, 0),
+		collectMutex:    sync.Mutex{},
+	}
 }
 
 func getHttpClient(skipVerify bool) (*http.Client, error) {
@@ -227,46 +244,74 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
-func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
+func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
+	if e.cacheEnabled {
+		e.collectMutex.Lock()
+		defer e.collectMutex.Unlock()
+		expiry := e.lastCollectTime.Add(e.cacheDuration)
+		if time.Now().Before(expiry) {
+			// Return cached
+			for _, cachedMetric := range e.cache {
+				outCh <- cachedMetric
+			}
+			return
+		}
+		// Reset cache for fresh sampling, but re-use underlying array
+		e.cache = e.cache[:0]
+	}
+
+	samplesCh := make(chan prometheus.Metric)
+	go func() {
+		for metric := range samplesCh {
+			outCh <- metric
+			if e.cacheEnabled {
+				e.cache = append(e.cache, metric)
+			}
+		}
+	}()
+
 	ok := true
+
 	if collectMetricsGroup[metricsGroupScans] {
-		ok = e.collectScanMetric(ch) && ok
+		ok = e.collectScanMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectStatisticsMetric(ch) && ok
+		ok = e.collectStatisticsMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectSystemVolumesMetric(ch) && ok
+		ok = e.collectSystemVolumesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupQuotas] {
-		ok = e.collectQuotasMetric(ch) && ok
+		ok = e.collectQuotasMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupRepositories] {
-		ok = e.collectRepositoriesMetric(ch) && ok
+		ok = e.collectRepositoriesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupReplication] {
-		ok = e.collectReplicationsMetric(ch) && ok
+		ok = e.collectReplicationsMetric(samplesCh) && ok
 	}
 
 	if ok {
-		ch <- prometheus.MustNewConstMetric(
+		samplesCh <- prometheus.MustNewConstMetric(
 			allMetrics["up"].Desc, allMetrics["up"].Type,
 			1.0,
 		)
 	} else {
-		ch <- prometheus.MustNewConstMetric(
+		samplesCh <- prometheus.MustNewConstMetric(
 			allMetrics["up"].Desc, allMetrics["up"].Type,
 			0.0,
 		)
 	}
+
+	close(samplesCh)
+	e.lastCollectTime = time.Now()
 }
 
 func main() {
 	var (
-		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
-		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-
-		harborInstance = &HarborExporter{}
+		listenAddress  = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
+		metricsPath    = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+		harborInstance = NewHarborExporter()
 	)
 
 	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&harborInstance.instance)
@@ -276,12 +321,17 @@ func main() {
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
+	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
+	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
+
+	level.Info(logger).Log("CacheEnabled", harborInstance.cacheEnabled)
+	level.Info(logger).Log("CacheDuration", harborInstance.cacheDuration)
 
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
