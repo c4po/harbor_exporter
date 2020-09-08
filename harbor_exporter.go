@@ -261,6 +261,9 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	}
 
 	samplesCh := make(chan prometheus.Metric)
+	// Use WaitGroup to ensure outCh isn't closed before the goroutine is finished
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
 		for metric := range samplesCh {
 			outCh <- metric
@@ -268,6 +271,7 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 				e.cache = append(e.cache, metric)
 			}
 		}
+		wg.Done()
 	}()
 
 	ok := true
@@ -305,6 +309,7 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 
 	close(samplesCh)
 	e.lastCollectTime = time.Now()
+	wg.Wait()
 }
 
 func main() {
