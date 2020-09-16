@@ -24,6 +24,8 @@ make dockerbuild
 | Metric | Meaning | Labels |
 | ------ | ------- | ------ |
 |harbor_up| | |
+|harbor_health| | |
+|harbor_components_health| | component=[chartmuseum,core,database,jobservice,notary,portal,redis,registry,registryctl]|
 |harbor_scans_completed | | |
 |harbor_scans_total | | |
 |harbor_scans_requester | | |
@@ -46,13 +48,11 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ./harbor_exporter --help
 ```
 
----
-
 `skip.metrics` - Skip collection of certain metric groups (optional)
 
-* Value can be `scans|statistics|quotas|repositories|replication`
-
-example:
+* valid value: `scans|statistics|quotas|repositories|replication|health`
+* default value: empty
+* example:
 ```
 ./harbor_exporter --skip.metrics scans --skip.metrics quotas
 ```
@@ -60,10 +60,10 @@ example:
 ---
 
 `cache.enabled` - Enable caching of metrics (optional)
-* Disabled by default.
+* valid value: `true|false`
+* default value: `false`
 * Cache duration can be changed with `--cache.duration` (default 20s).
-
-example:
+* example:
 ```
 ./harbor_exporter --cache.enabled --cache.duration 30s
 ```
