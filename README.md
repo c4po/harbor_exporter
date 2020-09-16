@@ -24,6 +24,8 @@ make dockerbuild
 | Metric | Meaning | Labels |
 | ------ | ------- | ------ |
 |harbor_up| | |
+|harbor_health| | |
+|harbor_components_health| | component=[chartmuseum,core,database,jobservice,notary,portal,redis,registry,registryctl]|
 |harbor_scans_completed | | |
 |harbor_scans_total | | |
 |harbor_scans_requester | | |
@@ -46,7 +48,7 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ./harbor_exporter --help
 ```
 
-* `skip.metrics` - (Optional) value can be `scans|statistics|quotas|repositories|replication`
+* `skip.metrics` - (Optional) value can be `health|scans|statistics|quotas|repositories|replication`
 example:
 ```
 ./harbor_exporter --skip.metrics scans --skip.metrics quotas

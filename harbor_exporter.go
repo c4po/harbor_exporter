@@ -23,6 +23,7 @@ import (
 	_ "net/http/pprof"
 	"os"
 	"time"
+
 	// "strings"
 	// "net/url"
 
@@ -40,6 +41,7 @@ const (
 	namespace = "harbor"
 
 	//These are metricsGroup enum values
+	metricsGroupHealth       = "health"
 	metricsGroupScans        = "scans"
 	metricsGroupStatistics   = "statistics"
 	metricsGroupQuotas       = "quotas"
@@ -49,6 +51,7 @@ const (
 
 func MetricsGroup_Values() []string {
 	return []string{
+		metricsGroupHealth,
 		metricsGroupScans,
 		metricsGroupStatistics,
 		metricsGroupQuotas,
@@ -61,6 +64,7 @@ var (
 	allMetrics          map[string]metricInfo
 	collectMetricsGroup map[string]bool
 
+	componentLabelNames       = []string{"component"}
 	typeLabelNames            = []string{"type"}
 	quotaLabelNames           = []string{"type", "repo_name", "repo_id"}
 	serverLabelNames          = []string{"storage"}
@@ -91,9 +95,13 @@ func createMetrics(instanceName string) {
 	allMetrics = make(map[string]metricInfo)
 
 	allMetrics["up"] = newMetricInfo(instanceName, "up", "Was the last query of harbor successful.", prometheus.GaugeValue, nil, nil)
+	allMetrics["health"] = newMetricInfo(instanceName, "health", "Harbor overall health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, nil, nil)
+	allMetrics["components_health"] = newMetricInfo(instanceName, "components_health", "Harbor components health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, componentLabelNames, nil)
 	allMetrics["scans_total"] = newMetricInfo(instanceName, "scans_total", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_completed"] = newMetricInfo(instanceName, "scans_completed", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_requester"] = newMetricInfo(instanceName, "scans_requester", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
+	allMetrics["scans_success"] = newMetricInfo(instanceName, "scans_success", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
+	allMetrics["scans_ongoing"] = newMetricInfo(instanceName, "scans_ongoing", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["project_count_total"] = newMetricInfo(instanceName, "project_count_total", "projects number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
 	allMetrics["repo_count_total"] = newMetricInfo(instanceName, "repo_count_total", "repositories number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
 	allMetrics["quotas_count_total"] = newMetricInfo(instanceName, "quotas_count_total", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
@@ -229,6 +237,9 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
 	ok := true
+	if collectMetricsGroup[metricsGroupHealth] {
+		ok = e.collectHealthMetric(ch) && ok
+	}
 	if collectMetricsGroup[metricsGroupScans] {
 		ok = e.collectScanMetric(ch) && ok
 	}
@@ -259,6 +270,22 @@ func (e *HarborExporter) Collect(ch chan<- prometheus.Metric) {
 			0.0,
 		)
 	}
+}
+
+// B2i converts bool to int8
+func B2i(b bool) int8 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// Status2i converts health status to int8
+func Status2i(s string) int8 {
+	if s == "healthy" {
+		return 1
+	}
+	return 0
 }
 
 func main() {
