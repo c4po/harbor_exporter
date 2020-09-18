@@ -281,7 +281,7 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 
 	ok := true
 	if collectMetricsGroup[metricsGroupHealth] {
-		ok = e.collectHealthMetric(ch) && ok
+		ok = e.collectHealthMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupScans] {
 		ok = e.collectScanMetric(samplesCh) && ok
