@@ -46,10 +46,26 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ./harbor_exporter --help
 ```
 
-* `skip.metrics` - (Optional) value can be `scans|statistics|quotas|repositories|replication`
+---
+
+`skip.metrics` - Skip collection of certain metric groups (optional)
+
+* Value can be `scans|statistics|quotas|repositories|replication`
+
 example:
 ```
 ./harbor_exporter --skip.metrics scans --skip.metrics quotas
+```
+
+---
+
+`cache.enabled` - Enable caching of metrics (optional)
+* Disabled by default.
+* Cache duration can be changed with `--cache.duration` (default 20s).
+
+example:
+```
+./harbor_exporter --cache.enabled --cache.duration 30s
 ```
 
 ### Environment variables
