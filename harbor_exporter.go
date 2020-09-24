@@ -22,6 +22,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -131,6 +133,7 @@ type HarborExporter struct {
 	apiPath  string
 	logger   log.Logger
 	isV2     bool
+	pageSize int
 	// Cache-releated
 	cacheEnabled    bool
 	cacheDuration   time.Duration
@@ -171,37 +174,80 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 }
 
 func (h HarborExporter) request(endpoint string) ([]byte, error) {
+	body, _, err := h.fetch(endpoint)
+	return body, err
+}
+
+func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
+	page := 1
+	separator := "?"
+	if strings.Index(endpoint, separator) > 0 {
+		separator = "&"
+	}
+	for {
+		path := fmt.Sprintf("%s%spage=%d&page_size=%d", endpoint, separator, page, h.pageSize)
+		body, headers, err := h.fetch(path)
+		if err != nil {
+			return err
+		}
+
+		err = callback(body)
+		if err != nil {
+			return err
+		}
+
+		countStr := headers.Get("x-total-count")
+		if countStr == "" {
+			break
+		}
+
+		count, err := strconv.Atoi(countStr)
+		if err != nil {
+			return err
+		}
+
+		if page*h.pageSize >= count {
+			break
+		}
+
+		page++
+	}
+	return nil
+}
+
+func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
+	level.Debug(h.logger).Log("endpoint", endpoint)
 	req, err := http.NewRequest("GET", h.uri+h.apiPath+endpoint, nil)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	req.SetBasicAuth(h.username, h.password)
 
 	client, err := getHttpClient(h.insecure)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
-		return nil, err
+		return nil, nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error reading response of request for "+endpoint, "err", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
-	return body, nil
+	return body, resp.Header, nil
 }
 
 func checkHarborVersion(h *HarborExporter) error {
@@ -340,6 +386,7 @@ func main() {
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
+	kingpin.Flag("harbor.page.size", "Page size on requests to the harbor API.").Default("50").IntVar(&harborInstance.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)
