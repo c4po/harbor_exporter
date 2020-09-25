@@ -7,7 +7,27 @@ import (
 	"time"
 )
 
-func (e *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool {
+type VolumeCollector struct {
+	exporter *HarborExporter
+	metrics  map[string]metricInfo
+}
+
+func CreateVolumeCollector(e *HarborExporter) *VolumeCollector {
+	vc := VolumeCollector{
+		exporter: e,
+		metrics:  make(map[string]metricInfo),
+	}
+	vc.metrics["system_volumes_bytes"] = newMetricInfo(e.instance, "system_volumes_bytes", "Get system volume info (total/free size).", prometheus.GaugeValue, storageLabelNames, nil)
+	return &vc
+}
+
+func (vc *VolumeCollector) Describe(ch chan<- *prometheus.Desc) {
+	for _, m := range vc.metrics {
+		ch <- m.Desc
+	}
+}
+
+func (vc *VolumeCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	type systemVolumesMetric struct {
 		Storage struct {
@@ -15,20 +35,19 @@ func (e *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric)
 			Free  float64
 		}
 	}
-	body, _ := e.request("/systeminfo/volumes")
+	body, _ := vc.exporter.request("/systeminfo/volumes")
 	var data systemVolumesMetric
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
-		return false
+		level.Error(vc.exporter.logger).Log(err.Error())
+		return
 	}
 
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Total, "total",
+		vc.metrics["system_volumes_bytes"].Desc, vc.metrics["system_volumes_bytes"].Type, data.Storage.Total, "total",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Free, "free",
+		vc.metrics["system_volumes_bytes"].Desc, vc.metrics["system_volumes_bytes"].Type, data.Storage.Free, "free",
 	)
 
 	reportLatency(start, "system_volumes_latency", ch)
-	return true
 }

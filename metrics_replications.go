@@ -9,7 +9,28 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
+type ReplicationCollector struct {
+	exporter *HarborExporter
+	metrics  map[string]metricInfo
+}
+
+func CreateReplicationCollector(e *HarborExporter) *ReplicationCollector {
+	rc := ReplicationCollector{
+		exporter: e,
+		metrics:  make(map[string]metricInfo),
+	}
+	rc.metrics["replication_status"] = newMetricInfo(e.instance, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
+	rc.metrics["replication_tasks"] = newMetricInfo(e.instance, "replication_tasks", "Get number of replication tasks, with various results, in the latest execution of this replication policy.", prometheus.GaugeValue, replicationTaskLabelNames, nil)
+	return &rc
+}
+
+func (rc *ReplicationCollector) Describe(ch chan<- *prometheus.Desc) {
+	for _, m := range rc.metrics {
+		ch <- m.Desc
+	}
+}
+
+func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
 	type policiesMetrics []struct {
 		Id   float64
@@ -26,7 +47,7 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 	}
 
 	var policiesData policiesMetrics
-	err := e.requestAll("/replication/policies", func(pageBody []byte) error {
+	err := rc.exporter.requestAll("/replication/policies", func(pageBody []byte) error {
 		var pageData policiesMetrics
 		if err := json.Unmarshal(pageBody, &pageData); err != nil {
 			return err
@@ -36,20 +57,20 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		return nil
 	})
 	if err != nil {
-		level.Error(e.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
-		return false
+		level.Error(rc.exporter.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
+		return
 	}
 
 	for i := range policiesData {
 		policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
 		policyName := policiesData[i].Name
 
-		body, _ := e.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
+		body, _ := rc.exporter.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
 		var data policyMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {
-			level.Error(e.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
-			return false
+			level.Error(rc.exporter.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
+			return
 		}
 
 		for i := range data {
@@ -59,23 +80,22 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 				replStatus = 1
 			}
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName,
+				rc.metrics["replication_status"].Desc, rc.metrics["replication_status"].Type, replStatus, policyName,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
+				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
+				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
+				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
+				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
 			)
 		}
 	}
 
 	reportLatency(start, "replication_latency", ch)
-	return true
 }
