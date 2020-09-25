@@ -58,6 +58,7 @@ func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 	})
 	if err != nil {
 		level.Error(rc.exporter.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
+		rc.exporter.replicationChan <- false
 		return
 	}
 
@@ -70,6 +71,7 @@ func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 
 		if err := json.Unmarshal(body, &data); err != nil {
 			level.Error(rc.exporter.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
+			rc.exporter.replicationChan <- false
 			return
 		}
 
@@ -96,6 +98,6 @@ func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 			)
 		}
 	}
-
 	reportLatency(start, "replication_latency", ch)
+	rc.exporter.replicationChan <- true
 }

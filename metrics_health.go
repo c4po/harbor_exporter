@@ -43,6 +43,7 @@ func (hc *HealthCollector) Collect(ch chan<- prometheus.Metric) {
 
 	if err := json.Unmarshal(body, &data); err != nil {
 		level.Error(hc.exporter.logger).Log(err.Error())
+		hc.exporter.healthChan <- false
 		return
 	}
 
@@ -56,4 +57,5 @@ func (hc *HealthCollector) Collect(ch chan<- prometheus.Metric) {
 		)
 	}
 	reportLatency(start, "health_latency", ch)
+	hc.exporter.healthChan <- true
 }

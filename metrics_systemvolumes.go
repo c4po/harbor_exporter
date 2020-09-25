@@ -39,6 +39,7 @@ func (vc *VolumeCollector) Collect(ch chan<- prometheus.Metric) {
 	var data systemVolumesMetric
 	if err := json.Unmarshal(body, &data); err != nil {
 		level.Error(vc.exporter.logger).Log(err.Error())
+		vc.exporter.volumeChan <- false
 		return
 	}
 
@@ -48,6 +49,6 @@ func (vc *VolumeCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(
 		vc.metrics["system_volumes_bytes"].Desc, vc.metrics["system_volumes_bytes"].Type, data.Storage.Free, "free",
 	)
-
 	reportLatency(start, "system_volumes_latency", ch)
+	vc.exporter.volumeChan <- true
 }

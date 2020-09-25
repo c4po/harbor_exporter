@@ -132,6 +132,14 @@ type HarborExporter struct {
 	lastCollectTime time.Time
 	cache           []prometheus.Metric
 	collectMutex    sync.Mutex
+	// status from other collectors
+	healthChan      chan bool
+	quotaChan       chan bool
+	replicationChan chan bool
+	repositoryChan  chan bool
+	scanChan        chan bool
+	statsChan       chan bool
+	volumeChan      chan bool
 }
 
 // NewHarborExporter constructs a HarborExporter instance
@@ -140,6 +148,13 @@ func NewHarborExporter() *HarborExporter {
 		cache:           make([]prometheus.Metric, 0),
 		lastCollectTime: time.Unix(0, 0),
 		collectMutex:    sync.Mutex{},
+		healthChan:      make(chan bool),
+		quotaChan:       make(chan bool),
+		replicationChan: make(chan bool),
+		repositoryChan:  make(chan bool),
+		scanChan:        make(chan bool),
+		statsChan:       make(chan bool),
+		volumeChan:      make(chan bool),
 	}
 }
 
@@ -296,6 +311,7 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
+	// TODO fix cache
 	if e.cacheEnabled {
 		e.collectMutex.Lock()
 		defer e.collectMutex.Unlock()
@@ -326,7 +342,27 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	}()
 
 	ok := true
-	// TODO fix up metric
+	if collectMetricsGroup[metricsGroupHealth] {
+		ok = <-e.healthChan && ok
+	}
+	if collectMetricsGroup[metricsGroupQuotas] {
+		ok = <-e.quotaChan && ok
+	}
+	if collectMetricsGroup[metricsGroupReplication] {
+		ok = <-e.replicationChan && ok
+	}
+	if collectMetricsGroup[metricsGroupRepositories] {
+		ok = <-e.repositoryChan && ok
+	}
+	if collectMetricsGroup[metricsGroupScans] {
+		ok = <-e.scanChan && ok
+	}
+	if collectMetricsGroup[metricsGroupStatistics] {
+		ok = <-e.statsChan && ok
+	}
+	if collectMetricsGroup[metricsGroupStatistics] {
+		ok = <-e.volumeChan && ok
+	}
 
 	if ok {
 		samplesCh <- prometheus.MustNewConstMetric(
