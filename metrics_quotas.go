@@ -11,12 +11,14 @@ import (
 type QuotaCollector struct {
 	exporter *HarborExporter
 	metrics  map[string]metricInfo
+	cache    *Cache
 }
 
 func CreateQuotaCollector(e *HarborExporter) *QuotaCollector {
 	qc := QuotaCollector{
 		exporter: e,
 		metrics:  make(map[string]metricInfo),
+		cache:    NewCache(cacheEnabled, cacheDuration),
 	}
 	qc.metrics["quotas_count_total"] = newMetricInfo(e.instance, "quotas_count_total", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
 	qc.metrics["quotas_size_bytes"] = newMetricInfo(e.instance, "quotas_size_bytes", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
@@ -31,6 +33,15 @@ func (qc *QuotaCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (qc *QuotaCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
+	if qc.cache.ReplayMetrics(ch) {
+		qc.exporter.quotaChan <- true
+		return
+	}
+	samplesCh, wg := qc.cache.StoreAndForwaredMetrics(ch)
+	defer func() {
+		close(samplesCh)
+		wg.Wait()
+	}()
 
 	type quotaMetric []struct {
 		Id  float64
@@ -72,16 +83,16 @@ func (qc *QuotaCollector) Collect(ch chan<- prometheus.Metric) {
 			level.Debug(qc.exporter.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
 		} else {
 			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				qc.metrics["quotas_count_total"].Desc, qc.metrics["quotas_count_total"].Type, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				qc.metrics["quotas_count_total"].Desc, qc.metrics["quotas_count_total"].Type, data[i].Used.Count, "used", data[i].Ref.Name, repoid,
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				qc.metrics["quotas_size_bytes"].Desc, qc.metrics["quotas_size_bytes"].Type, data[i].Hard.Storage, "hard", data[i].Ref.Name, repoid,
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				qc.metrics["quotas_size_bytes"].Desc, qc.metrics["quotas_size_bytes"].Type, data[i].Used.Storage, "used", data[i].Ref.Name, repoid,
 			)
 		}

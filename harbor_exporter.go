@@ -24,7 +24,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	// "strings"
@@ -75,6 +74,9 @@ var (
 	storageLabelNames         = []string{"storage"}
 	replicationLabelNames     = []string{"repl_pol_name"}
 	replicationTaskLabelNames = []string{"repl_pol_name", "result"}
+
+	cacheEnabled  bool
+	cacheDuration time.Duration
 )
 
 type metricInfo struct {
@@ -126,12 +128,7 @@ type HarborExporter struct {
 	logger   log.Logger
 	isV2     bool
 	pageSize int
-	// Cache-releated
-	cacheEnabled    bool
-	cacheDuration   time.Duration
-	lastCollectTime time.Time
-	cache           []prometheus.Metric
-	collectMutex    sync.Mutex
+	cache    *Cache
 	// status from other collectors
 	healthChan      chan bool
 	quotaChan       chan bool
@@ -145,9 +142,7 @@ type HarborExporter struct {
 // NewHarborExporter constructs a HarborExporter instance
 func NewHarborExporter() *HarborExporter {
 	return &HarborExporter{
-		cache:           make([]prometheus.Metric, 0),
-		lastCollectTime: time.Unix(0, 0),
-		collectMutex:    sync.Mutex{},
+		cache:           NewCache(cacheEnabled, cacheDuration),
 		healthChan:      make(chan bool),
 		quotaChan:       make(chan bool),
 		replicationChan: make(chan bool),
@@ -311,36 +306,6 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
 func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
-	// TODO fix cache
-	if e.cacheEnabled {
-		e.collectMutex.Lock()
-		defer e.collectMutex.Unlock()
-		expiry := e.lastCollectTime.Add(e.cacheDuration)
-		if time.Now().Before(expiry) {
-			// Return cached
-			for _, cachedMetric := range e.cache {
-				outCh <- cachedMetric
-			}
-			return
-		}
-		// Reset cache for fresh sampling, but re-use underlying array
-		e.cache = e.cache[:0]
-	}
-
-	samplesCh := make(chan prometheus.Metric)
-	// Use WaitGroup to ensure outCh isn't closed before the goroutine is finished
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		for metric := range samplesCh {
-			outCh <- metric
-			if e.cacheEnabled {
-				e.cache = append(e.cache, metric)
-			}
-		}
-		wg.Done()
-	}()
-
 	ok := true
 	if collectMetricsGroup[metricsGroupHealth] {
 		ok = <-e.healthChan && ok
@@ -364,6 +329,17 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 		ok = <-e.volumeChan && ok
 	}
 
+	// channels are read before checking cache to avoid deadlock if some collectors use cached results
+	if e.cache.ReplayMetrics(outCh) {
+		return
+	}
+
+	samplesCh, wg := e.cache.StoreAndForwaredMetrics(outCh)
+	defer func() {
+		close(samplesCh)
+		wg.Wait()
+	}()
+
 	if ok {
 		samplesCh <- prometheus.MustNewConstMetric(
 			allMetrics["up"].Desc, allMetrics["up"].Type,
@@ -375,10 +351,6 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 			0.0,
 		)
 	}
-
-	close(samplesCh)
-	e.lastCollectTime = time.Now()
-	wg.Wait()
 }
 
 // Status2i converts health status to int8
@@ -404,8 +376,8 @@ func main() {
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
 	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&harborInstance.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
-	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
-	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)
+	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&cacheEnabled)
+	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&cacheDuration)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
@@ -413,8 +385,8 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	level.Info(logger).Log("CacheEnabled", harborInstance.cacheEnabled)
-	level.Info(logger).Log("CacheDuration", harborInstance.cacheDuration)
+	level.Info(logger).Log("CacheEnabled", cacheEnabled)
+	level.Info(logger).Log("CacheDuration", cacheDuration)
 
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())

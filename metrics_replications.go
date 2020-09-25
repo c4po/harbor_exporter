@@ -12,12 +12,14 @@ import (
 type ReplicationCollector struct {
 	exporter *HarborExporter
 	metrics  map[string]metricInfo
+	cache    *Cache
 }
 
 func CreateReplicationCollector(e *HarborExporter) *ReplicationCollector {
 	rc := ReplicationCollector{
 		exporter: e,
 		metrics:  make(map[string]metricInfo),
+		cache:    NewCache(cacheEnabled, cacheDuration),
 	}
 	rc.metrics["replication_status"] = newMetricInfo(e.instance, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
 	rc.metrics["replication_tasks"] = newMetricInfo(e.instance, "replication_tasks", "Get number of replication tasks, with various results, in the latest execution of this replication policy.", prometheus.GaugeValue, replicationTaskLabelNames, nil)
@@ -32,6 +34,15 @@ func (rc *ReplicationCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
+	if rc.cache.ReplayMetrics(ch) {
+		rc.exporter.replicationChan <- true
+		return
+	}
+	samplesCh, wg := rc.cache.StoreAndForwaredMetrics(ch)
+	defer func() {
+		close(samplesCh)
+		wg.Wait()
+	}()
 	type policiesMetrics []struct {
 		Id   float64
 		Name string
@@ -81,19 +92,19 @@ func (rc *ReplicationCollector) Collect(ch chan<- prometheus.Metric) {
 			if data[i].Status == "Succeed" {
 				replStatus = 1
 			}
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				rc.metrics["replication_status"].Desc, rc.metrics["replication_status"].Type, replStatus, policyName,
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
 			)
-			ch <- prometheus.MustNewConstMetric(
+			samplesCh <- prometheus.MustNewConstMetric(
 				rc.metrics["replication_tasks"].Desc, rc.metrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
 			)
 		}

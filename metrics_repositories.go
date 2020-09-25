@@ -12,12 +12,14 @@ import (
 type RepositoryCollector struct {
 	exporter *HarborExporter
 	metrics  map[string]metricInfo
+	cache    *Cache
 }
 
 func CreateRepositoryCollector(e *HarborExporter) *RepositoryCollector {
 	rc := RepositoryCollector{
 		exporter: e,
 		metrics:  make(map[string]metricInfo),
+		cache:    NewCache(cacheEnabled, cacheDuration),
 	}
 	rc.metrics["repositories_pull_total"] = newMetricInfo(e.instance, "repositories_pull_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	rc.metrics["repositories_star_total"] = newMetricInfo(e.instance, "repositories_star_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
@@ -33,6 +35,15 @@ func (rc *RepositoryCollector) Describe(ch chan<- *prometheus.Desc) {
 
 func (rc *RepositoryCollector) Collect(ch chan<- prometheus.Metric) {
 	start := time.Now()
+	if rc.cache.ReplayMetrics(ch) {
+		rc.exporter.repositoryChan <- true
+		return
+	}
+	samplesCh, wg := rc.cache.StoreAndForwaredMetrics(ch)
+	defer func() {
+		close(samplesCh)
+		wg.Wait()
+	}()
 	type projectsMetrics []struct {
 		Project_id  float64
 		Owner_id    float64
@@ -110,13 +121,13 @@ func (rc *RepositoryCollector) Collect(ch chan<- prometheus.Metric) {
 
 			for i := range data {
 				repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
-				ch <- prometheus.MustNewConstMetric(
+				samplesCh <- prometheus.MustNewConstMetric(
 					rc.metrics["repositories_pull_total"].Desc, rc.metrics["repositories_pull_total"].Type, data[i].Pull_count, data[i].Name, repoId,
 				)
-				// ch <- prometheus.MustNewConstMetric(
+				// samplesCh <- prometheus.MustNewConstMetric(
 				// 	rc.metrics["repositories_star_total"].Desc, rc.metrics["repositories_star_total"].Type, data[i].Star_count, data[i].Name, repoId,
 				// )
-				ch <- prometheus.MustNewConstMetric(
+				samplesCh <- prometheus.MustNewConstMetric(
 					rc.metrics["repositories_tags_total"].Desc, rc.metrics["repositories_tags_total"].Type, data[i].Artifact_count, data[i].Name, repoId,
 				)
 			}
@@ -141,13 +152,13 @@ func (rc *RepositoryCollector) Collect(ch chan<- prometheus.Metric) {
 
 			for i := range data {
 				repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
-				ch <- prometheus.MustNewConstMetric(
+				samplesCh <- prometheus.MustNewConstMetric(
 					rc.metrics["repositories_pull_total"].Desc, rc.metrics["repositories_pull_total"].Type, data[i].Pull_count, data[i].Name, repoId,
 				)
-				ch <- prometheus.MustNewConstMetric(
+				samplesCh <- prometheus.MustNewConstMetric(
 					rc.metrics["repositories_star_total"].Desc, rc.metrics["repositories_star_total"].Type, data[i].Star_count, data[i].Name, repoId,
 				)
-				ch <- prometheus.MustNewConstMetric(
+				samplesCh <- prometheus.MustNewConstMetric(
 					rc.metrics["repositories_tags_total"].Desc, rc.metrics["repositories_tags_total"].Type, data[i].Tags_count, data[i].Name, repoId,
 				)
 			}
