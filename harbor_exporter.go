@@ -48,6 +48,7 @@ const (
 	metricsGroupQuotas       = "quotas"
 	metricsGroupRepositories = "repositories"
 	metricsGroupReplication  = "replication"
+	metricsGroupSystemInfo   = "systeminfo"
 )
 
 func MetricsGroup_Values() []string {
@@ -58,6 +59,7 @@ func MetricsGroup_Values() []string {
 		metricsGroupQuotas,
 		metricsGroupRepositories,
 		metricsGroupReplication,
+		metricsGroupSystemInfo,
 	}
 }
 
@@ -73,6 +75,7 @@ var (
 	storageLabelNames         = []string{"storage"}
 	replicationLabelNames     = []string{"repl_pol_name"}
 	replicationTaskLabelNames = []string{"repl_pol_name", "result"}
+	systemInfoLabelNames      = []string{"auth_mode", "project_creation_restriction", "harbor_version", "registry_storage_provider_name"}
 )
 
 type metricInfo struct {
@@ -111,6 +114,13 @@ func createMetrics(instanceName string) {
 	allMetrics["repositories_tags_total"] = newMetricInfo(instanceName, "repositories_tags_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	allMetrics["replication_status"] = newMetricInfo(instanceName, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
 	allMetrics["replication_tasks"] = newMetricInfo(instanceName, "replication_tasks", "Get number of replication tasks, with various results, in the latest execution of this replication policy.", prometheus.GaugeValue, replicationTaskLabelNames, nil)
+	allMetrics["system_info"] = newMetricInfo(instanceName, "system_info", "A metric with a constant '1' value labeled by auth_mode, project_creation_restriction, harbor_version and registry_storage_provider_name from /systeminfo endpoint.", prometheus.GaugeValue, systemInfoLabelNames, nil)
+	allMetrics["system_with_notary"] = newMetricInfo(instanceName, "system_with_notary", "If notary is used", prometheus.GaugeValue, nil, nil)
+	allMetrics["system_self_registration"] = newMetricInfo(instanceName, "system_self_registration", "If self registration is enabled", prometheus.GaugeValue, nil, nil)
+	allMetrics["system_has_ca_root"] = newMetricInfo(instanceName, "system_has_ca_root", "If harbor has a root ca", prometheus.GaugeValue, nil, nil)
+	allMetrics["system_read_only"] = newMetricInfo(instanceName, "system_read_only", "If harbor is in read-only mode", prometheus.GaugeValue, nil, nil)
+	allMetrics["system_with_chartmuseum"] = newMetricInfo(instanceName, "system_with_chartmuseum", "If harbor has chartmuseum enabled", prometheus.GaugeValue, nil, nil)
+	allMetrics["system_notification_enable"] = newMetricInfo(instanceName, "system_notification_enable", "If notifications are enabled", prometheus.GaugeValue, nil, nil)
 }
 
 type promHTTPLogger struct {
@@ -300,6 +310,9 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	}
 	if collectMetricsGroup[metricsGroupReplication] {
 		ok = e.collectReplicationsMetric(samplesCh) && ok
+	}
+	if collectMetricsGroup[metricsGroupSystemInfo] {
+		ok = e.collectSystemMetric(samplesCh)
 	}
 
 	if ok {
