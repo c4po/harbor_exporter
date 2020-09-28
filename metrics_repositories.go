@@ -49,11 +49,17 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		Creation_time  time.Time
 		Update_time    time.Time
 	}
-	projectsBody, _ := e.request("/projects")
 	var projectsData projectsMetrics
-	var url string
+	err := e.requestAll("/projects", func(pageBody []byte) error {
+		var pageData projectsMetrics
+		if err := json.Unmarshal(pageBody, &pageData); err != nil {
+			return err
+		}
+		projectsData = append(projectsData, pageData...)
 
-	if err := json.Unmarshal(projectsBody, &projectsData); err != nil {
+		return nil
+	})
+	if err != nil {
 		level.Error(e.logger).Log(err.Error())
 		return false
 	}
@@ -61,11 +67,18 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 	for i := range projectsData {
 		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
 		if e.isV2 {
-			url = "/projects/" + projectsData[i].Name + "/repositories"
-			body, _ := e.request(url)
 			var data repositoriesMetricV2
+			err := e.requestAll("/projects/"+projectsData[i].Name+"/repositories", func(pageBody []byte) error {
+				var pageData repositoriesMetricV2
+				if err := json.Unmarshal(pageBody, &pageData); err != nil {
+					return err
+				}
 
-			if err := json.Unmarshal(body, &data); err != nil {
+				data = append(data, pageData...)
+
+				return nil
+			})
+			if err != nil {
 				level.Error(e.logger).Log(err.Error())
 				return false
 			}
@@ -84,11 +97,18 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			}
 
 		} else {
-			url = "/repositories?project_id=" + projectId
-			body, _ := e.request(url)
 			var data repositoriesMetric
+			err := e.requestAll("/repositories?project_id="+projectId, func(pageBody []byte) error {
+				var pageData repositoriesMetric
+				if err := json.Unmarshal(pageBody, &pageData); err != nil {
+					return err
+				}
 
-			if err := json.Unmarshal(body, &data); err != nil {
+				data = append(data, pageData...)
+
+				return nil
+			})
+			if err != nil {
 				level.Error(e.logger).Log(err.Error())
 				return false
 			}
