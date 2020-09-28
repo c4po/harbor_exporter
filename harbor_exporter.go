@@ -137,18 +137,19 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 }
 
 type HarborExporter struct {
-	instance string
-	uri      string
-	username string
-	password string
-	timeout  time.Duration
-	insecure bool
-	apiPath  string
-	logger   log.Logger
-	isV2     bool
-	pageSize int
-	client   *http.Client
-	// Cache-related
+	instance   string
+	uri        string
+	username   string
+	password   string
+	timeout    time.Duration
+	insecure   bool
+	apiPath    string
+	logger     log.Logger
+	isV2       bool
+	pageSize   int
+	client     *http.Client
+	numWorkers int
+	// Cache-releated
 	cacheEnabled    bool
 	cacheDuration   time.Duration
 	lastCollectTime time.Time
@@ -193,40 +194,85 @@ func (h *HarborExporter) request(endpoint string) ([]byte, error) {
 }
 
 func (h *HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
-	page := 1
+	_, totalCount, err := h.requestPage(endpoint, 1, 1)
+	if err != nil {
+		return err
+	}
+	pageCount := totalCount / h.pageSize
+	if totalCount%h.pageSize != 0 {
+		pageCount++
+	}
+
+	pages := make([]interface{}, pageCount)
+	for i := 0; i < pageCount; i++ {
+		pages[i] = i + 1
+	}
+	return h.doWork(func(d interface{}) error {
+		body, _, err := h.requestPage(endpoint, d.(int), h.pageSize)
+		if err == nil {
+			err = callback(body)
+		}
+		return err
+	}, pages)
+}
+
+func (h HarborExporter) doWork(work func(interface{}) error, input []interface{}) error {
+	inputChan := make(chan interface{}, len(input))
+
+	type Result struct {
+		body []byte
+		err  error
+	}
+	resultChan := make(chan Result, len(input))
+	defer close(resultChan)
+
+	for i := 0; i < h.numWorkers; i++ {
+		go func() {
+			for d := range inputChan {
+				err := work(d)
+				resultChan <- Result{err: err}
+			}
+		}()
+	}
+
+	for i := 0; i < len(input); i++ {
+		inputChan <- input[i]
+	}
+	close(inputChan)
+
+	var pageErr error
+	for i := 0; i < len(input); i++ {
+		r := <-resultChan
+		if r.err != nil {
+			pageErr = r.err
+		}
+	}
+
+	return pageErr
+}
+
+func (h HarborExporter) requestPage(endpoint string, page int, pageSize int) ([]byte, int, error) {
 	separator := "?"
 	if strings.Index(endpoint, separator) > 0 {
 		separator = "&"
 	}
-	for {
-		path := fmt.Sprintf("%s%spage=%d&page_size=%d", endpoint, separator, page, h.pageSize)
-		body, headers, err := h.fetch(path)
-		if err != nil {
-			return err
-		}
-
-		err = callback(body)
-		if err != nil {
-			return err
-		}
-
-		countStr := headers.Get("x-total-count")
-		if countStr == "" {
-			break
-		}
-
-		count, err := strconv.Atoi(countStr)
-		if err != nil {
-			return err
-		}
-
-		if page*h.pageSize >= count {
-			break
-		}
-
-		page++
+	path := fmt.Sprintf("%s%spage=%d&page_size=%d", endpoint, separator, page, pageSize)
+	body, headers, err := h.fetch(path)
+	if err != nil {
+		return nil, 0, err
 	}
-	return nil
+
+	countStr := headers.Get("x-total-count")
+	if countStr == "" {
+		return nil, 0, fmt.Errorf("header x-total-count missing in response")
+	}
+
+	count, err := strconv.Atoi(countStr)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return body, count, nil
 }
 
 func (h *HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
@@ -407,6 +453,7 @@ func main() {
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&exporter.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
 	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&exporter.pageSize)
+	kingpin.Flag("harbor.num.workers", "Size of thread pools when working in parallel.").Default("2").IntVar(&exporter.numWorkers)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&exporter.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&exporter.cacheDuration)

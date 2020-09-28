@@ -11,7 +11,7 @@ import (
 
 func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
-	type projectsMetrics []struct {
+	type projectsMetric struct {
 		Project_id  float64
 		Owner_id    float64
 		Name        string
@@ -50,13 +50,15 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		Creation_time  time.Time
 		Update_time    time.Time
 	}
-	var projectsData projectsMetrics
+	var projectsData []interface{}
 	err := h.requestAll("/projects", func(pageBody []byte) error {
-		var pageData projectsMetrics
+		var pageData []projectsMetric
 		if err := json.Unmarshal(pageBody, &pageData); err != nil {
 			return err
 		}
-		projectsData = append(projectsData, pageData...)
+		for _, i := range pageData {
+			projectsData = append(projectsData, i)
+		}
 
 		return nil
 	})
@@ -64,12 +66,12 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		level.Error(h.logger).Log(err.Error())
 		return false
 	}
-
-	for i := range projectsData {
-		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
+	repoFunc := func(data interface{}) error {
+		project := data.(projectsMetric)
+		projectId := strconv.FormatFloat(project.Project_id, 'f', 0, 32)
 		if h.isV2 {
 			var data repositoriesMetricV2
-			err := h.requestAll("/projects/"+projectsData[i].Name+"/repositories", func(pageBody []byte) error {
+			err := h.requestAll("/projects/"+project.Name+"/repositories", func(pageBody []byte) error {
 				var pageData repositoriesMetricV2
 				if err := json.Unmarshal(pageBody, &pageData); err != nil {
 					return err
@@ -81,7 +83,7 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			})
 			if err != nil {
 				level.Error(h.logger).Log(err.Error())
-				return false
+				return err
 			}
 
 			for i := range data {
@@ -111,7 +113,7 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			})
 			if err != nil {
 				level.Error(h.logger).Log(err.Error())
-				return false
+				return err
 			}
 
 			for i := range data {
@@ -127,8 +129,9 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 				)
 			}
 		}
+		return nil
 	}
 
 	reportLatency(start, "repositories_latency", ch)
-	return true
+	return h.doWork(repoFunc, projectsData) == nil
 }
