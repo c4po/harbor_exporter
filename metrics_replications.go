@@ -23,10 +23,17 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 
-	policiesBody, _ := e.request("/replication/policies")
 	var policiesData policiesMetrics
+	err := e.requestAll("/replication/policies", func(pageBody []byte) error {
+		var pageData policiesMetrics
+		if err := json.Unmarshal(pageBody, &pageData); err != nil {
+			return err
+		}
+		policiesData = append(policiesData, pageData...)
 
-	if err := json.Unmarshal(policiesBody, &policiesData); err != nil {
+		return nil
+	})
+	if err != nil {
 		level.Error(e.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
 		return false
 	}
