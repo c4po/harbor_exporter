@@ -65,6 +65,10 @@ func MetricsGroup_Values() []string {
 var (
 	allMetrics          map[string]metricInfo
 	collectMetricsGroup map[string]bool
+	numPageWorkers      int
+	numRepoWorkers      int
+	pageWorkers         *WorkPool
+	repoWorkers         *WorkPool
 
 	componentLabelNames       = []string{"component"}
 	typeLabelNames            = []string{"type"}
@@ -203,52 +207,24 @@ func (h *HarborExporter) requestAll(endpoint string, callback func([]byte) error
 		pageCount++
 	}
 
-	pages := make([]interface{}, pageCount)
+	errChan := make(chan error, pageCount)
+	defer close(errChan)
 	for i := 0; i < pageCount; i++ {
-		pages[i] = i + 1
-	}
-	return h.doWork(func(d interface{}) error {
-		body, _, err := h.requestPage(endpoint, d.(int), h.pageSize)
-		if err == nil {
-			err = callback(body)
-		}
-		return err
-	}, pages)
-}
-
-func (h HarborExporter) doWork(work func(interface{}) error, input []interface{}) error {
-	inputChan := make(chan interface{}, len(input))
-
-	type Result struct {
-		body []byte
-		err  error
-	}
-	resultChan := make(chan Result, len(input))
-	defer close(resultChan)
-
-	for i := 0; i < h.numWorkers; i++ {
-		go func() {
-			for d := range inputChan {
-				err := work(d)
-				resultChan <- Result{err: err}
+		pageWorkers.doWork(func(d interface{}) error {
+			body, _, err := h.requestPage(endpoint, d.(int), h.pageSize)
+			if err == nil {
+				err = callback(body)
 			}
-		}()
+			return err
+		}, i+1, errChan)
 	}
-
-	for i := 0; i < len(input); i++ {
-		inputChan <- input[i]
-	}
-	close(inputChan)
-
-	var pageErr error
-	for i := 0; i < len(input); i++ {
-		r := <-resultChan
-		if r.err != nil {
-			pageErr = r.err
+	for i := 0; i < pageCount; i++ {
+		e := <-errChan
+		if e != nil {
+			err = e
 		}
 	}
-
-	return pageErr
+	return err
 }
 
 func (h HarborExporter) requestPage(endpoint string, page int, pageSize int) ([]byte, int, error) {
@@ -453,7 +429,8 @@ func main() {
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&exporter.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
 	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&exporter.pageSize)
-	kingpin.Flag("harbor.num.workers", "Size of thread pools when working in parallel.").Default("2").IntVar(&exporter.numWorkers)
+	kingpin.Flag("harbor.numpageworkers", "Size of thread pools when fetching pages of results.").Envar("HARBOR_NUMPAGEWORKERS").Default("2").IntVar(&numPageWorkers)
+	kingpin.Flag("harbor.numrepoworkers", "Size of thread pools when fetching repositories of projects.").Envar("HARBOR_NUMREPOWORKERS").Default("2").IntVar(&numRepoWorkers)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&exporter.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&exporter.cacheDuration)
@@ -490,6 +467,8 @@ func main() {
 	}
 
 	exporter.logger = logger
+	pageWorkers = NewWorkPool(numPageWorkers)
+	repoWorkers = NewWorkPool(numRepoWorkers)
 
 	err = checkHarborVersion(exporter)
 	if err != nil {

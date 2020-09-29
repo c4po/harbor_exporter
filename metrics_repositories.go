@@ -131,7 +131,17 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		}
 		return nil
 	}
-
+	errChan := make(chan error, len(projectsData))
+	defer close(errChan)
+	for i := 0; i < len(projectsData); i++ {
+		repoWorkers.doWork(repoFunc, projectsData[i], errChan)
+	}
+	for i := 0; i < len(projectsData); i++ {
+		e := <-errChan
+		if e != nil {
+			err = e
+		}
+	}
 	reportLatency(start, "repositories_latency", ch)
-	return h.doWork(repoFunc, projectsData) == nil
+	return err == nil
 }
