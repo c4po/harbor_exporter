@@ -386,7 +386,7 @@ func main() {
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
-	kingpin.Flag("harbor.page.size", "Page size on requests to the harbor API.").Default("50").IntVar(&harborInstance.pageSize)
+	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&harborInstance.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)

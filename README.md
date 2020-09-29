@@ -68,6 +68,10 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ./harbor_exporter --cache.enabled --cache.duration 30s
 ```
 
+---
+`harbor.pagesize` - Set page size for results. Can be also set with Environment variable `HARBOR_PAGESIZE`
+* default value: `500`
+
 ### Environment variables
 Below environment variables can be used instead of the corresponding flags. Easy when running the exporter in a container.
 
