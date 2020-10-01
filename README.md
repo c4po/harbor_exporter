@@ -45,6 +45,13 @@ make dockerbuild
 |harbor_repositories_latency| | |
 |harbor_replication_status|status of the last execution of this replication policy: Succeed = 1, any other status = 0|repl_pol_name|
 |harbor_replication_tasks|number of replication tasks, with various results, in the latest execution of this replication policy|repl_pol_name, result=[failed, succeed, in_progress, stopped]|
+|harbor_system_info               | |auth_mode, project_creation_restriction, harbor_version, registry_storage_provider_name
+|harbor_system_with_notary        | |
+|harbor_system_self_registration  | |
+|harbor_system_has_ca_root        | |
+|harbor_system_read_only          | |
+|harbor_system_with_chartmuseum   | |
+|harbor_system_notification_enable| |                              
 |harbor_replication_latency| | |
 
 _Note: when the harbor.instance flag is used, each metric name starts with `harbor_instancename_` instead of just `harbor_`._
