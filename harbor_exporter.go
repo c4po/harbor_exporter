@@ -401,6 +401,13 @@ func Status2i(s string) int8 {
 	return 0
 }
 
+func Btoi(b bool) int8 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
 func main() {
 	var (
 		listenAddress  = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()

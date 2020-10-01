@@ -36,31 +36,23 @@ func (e *HarborExporter) collectSystemMetric(ch chan<- prometheus.Metric) bool {
 
 	// Set all bool values as separate metrics
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_with_notary"].Desc, allMetrics["system_with_notary"].Type, bool2Float(data.WithNotary),
+		allMetrics["system_with_notary"].Desc, allMetrics["system_with_notary"].Type, Btoi(data.WithNotary),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_self_registration"].Desc, allMetrics["system_self_registration"].Type, bool2Float(data.SelfRegistration),
+		allMetrics["system_self_registration"].Desc, allMetrics["system_self_registration"].Type, Btoi(data.SelfRegistration),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_has_ca_root"].Desc, allMetrics["system_has_ca_root"].Type, bool2Float(data.HasCaRoot),
+		allMetrics["system_has_ca_root"].Desc, allMetrics["system_has_ca_root"].Type, Btoi(data.HasCaRoot),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_read_only"].Desc, allMetrics["system_read_only"].Type, bool2Float(data.ReadOnly),
+		allMetrics["system_read_only"].Desc, allMetrics["system_read_only"].Type, Btoi(data.ReadOnly),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_with_chartmuseum"].Desc, allMetrics["system_with_chartmuseum"].Type, bool2Float(data.WithChartmuseum),
+		allMetrics["system_with_chartmuseum"].Desc, allMetrics["system_with_chartmuseum"].Type, Btoi(data.WithChartmuseum),
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_notification_enable"].Desc, allMetrics["system_notification_enable"].Type, bool2Float(data.NotificationEnable),
+		allMetrics["system_notification_enable"].Desc, allMetrics["system_notification_enable"].Type, Btoi(data.NotificationEnable),
 	)
 
 	return true
-}
-
-func bool2Float(value bool) float64 {
-	floatValue := 0.0
-	if value {
-		floatValue = 1
-	}
-	return floatValue
 }
