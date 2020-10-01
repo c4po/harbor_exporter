@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
+	"time"
 )
 
 func (e *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 
 	type statisticsMetric struct {
 		Total_project_count   float64
@@ -50,5 +52,6 @@ func (e *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bo
 		allMetrics["repo_count_total"].Desc, allMetrics["repo_count_total"].Type, data.Private_repo_count, "private_repo",
 	)
 
+	reportLatency(start, "statistics_latency", ch)
 	return true
 }

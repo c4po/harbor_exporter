@@ -22,6 +22,8 @@ import (
 	"net/http"
 	_ "net/http/pprof"
 	"os"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -101,17 +103,23 @@ func createMetrics(instanceName string) {
 	allMetrics["up"] = newMetricInfo(instanceName, "up", "Was the last query of harbor successful.", prometheus.GaugeValue, nil, nil)
 	allMetrics["health"] = newMetricInfo(instanceName, "health", "Harbor overall health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, nil, nil)
 	allMetrics["components_health"] = newMetricInfo(instanceName, "components_health", "Harbor components health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, componentLabelNames, nil)
+	allMetrics["health_latency"] = newMetricInfo(instanceName, "health_latency", "Time in seconds to collect health metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_total"] = newMetricInfo(instanceName, "scans_total", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_completed"] = newMetricInfo(instanceName, "scans_completed", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_requester"] = newMetricInfo(instanceName, "scans_requester", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
+	allMetrics["scans_latency"] = newMetricInfo(instanceName, "scans_latency", "Time in seconds to collect scan metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["project_count_total"] = newMetricInfo(instanceName, "project_count_total", "projects number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
 	allMetrics["repo_count_total"] = newMetricInfo(instanceName, "repo_count_total", "repositories number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
+	allMetrics["statistics_latency"] = newMetricInfo(instanceName, "statistics_latency", "Time in seconds to collect statistics metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["quotas_count_total"] = newMetricInfo(instanceName, "quotas_count_total", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
 	allMetrics["quotas_size_bytes"] = newMetricInfo(instanceName, "quotas_size_bytes", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
+	allMetrics["quotas_latency"] = newMetricInfo(instanceName, "quotas_latency", "Time in seconds to collect quota metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["system_volumes_bytes"] = newMetricInfo(instanceName, "system_volumes_bytes", "Get system volume info (total/free size).", prometheus.GaugeValue, storageLabelNames, nil)
+	allMetrics["system_volumes_latency"] = newMetricInfo(instanceName, "system_volumes_latency", "Time in seconds to collect system_volume metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["repositories_pull_total"] = newMetricInfo(instanceName, "repositories_pull_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	allMetrics["repositories_star_total"] = newMetricInfo(instanceName, "repositories_star_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	allMetrics["repositories_tags_total"] = newMetricInfo(instanceName, "repositories_tags_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
+	allMetrics["repositories_latency"] = newMetricInfo(instanceName, "repositories_latency", "Time in seconds to collect repository metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["replication_status"] = newMetricInfo(instanceName, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
 	allMetrics["replication_tasks"] = newMetricInfo(instanceName, "replication_tasks", "Get number of replication tasks, with various results, in the latest execution of this replication policy.", prometheus.GaugeValue, replicationTaskLabelNames, nil)
 	allMetrics["system_info"] = newMetricInfo(instanceName, "system_info", "A metric with a constant '1' value labeled by auth_mode, project_creation_restriction, harbor_version and registry_storage_provider_name from /systeminfo endpoint.", prometheus.GaugeValue, systemInfoLabelNames, nil)
@@ -121,6 +129,7 @@ func createMetrics(instanceName string) {
 	allMetrics["system_read_only"] = newMetricInfo(instanceName, "system_read_only", "If harbor is in read-only mode", prometheus.GaugeValue, nil, nil)
 	allMetrics["system_with_chartmuseum"] = newMetricInfo(instanceName, "system_with_chartmuseum", "If harbor has chartmuseum enabled", prometheus.GaugeValue, nil, nil)
 	allMetrics["system_notification_enable"] = newMetricInfo(instanceName, "system_notification_enable", "If notifications are enabled", prometheus.GaugeValue, nil, nil)
+	allMetrics["replication_latency"] = newMetricInfo(instanceName, "replication_latency", "Time in seconds to collect replication metrics", prometheus.GaugeValue, nil, nil)
 }
 
 type promHTTPLogger struct {
@@ -141,6 +150,7 @@ type HarborExporter struct {
 	apiPath  string
 	logger   log.Logger
 	isV2     bool
+	pageSize int
 	// Cache-releated
 	cacheEnabled    bool
 	cacheDuration   time.Duration
@@ -181,37 +191,80 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 }
 
 func (h HarborExporter) request(endpoint string) ([]byte, error) {
+	body, _, err := h.fetch(endpoint)
+	return body, err
+}
+
+func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
+	page := 1
+	separator := "?"
+	if strings.Index(endpoint, separator) > 0 {
+		separator = "&"
+	}
+	for {
+		path := fmt.Sprintf("%s%spage=%d&page_size=%d", endpoint, separator, page, h.pageSize)
+		body, headers, err := h.fetch(path)
+		if err != nil {
+			return err
+		}
+
+		err = callback(body)
+		if err != nil {
+			return err
+		}
+
+		countStr := headers.Get("x-total-count")
+		if countStr == "" {
+			break
+		}
+
+		count, err := strconv.Atoi(countStr)
+		if err != nil {
+			return err
+		}
+
+		if page*h.pageSize >= count {
+			break
+		}
+
+		page++
+	}
+	return nil
+}
+
+func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
+	level.Debug(h.logger).Log("endpoint", endpoint)
 	req, err := http.NewRequest("GET", h.uri+h.apiPath+endpoint, nil)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	req.SetBasicAuth(h.username, h.password)
 
 	client, err := getHttpClient(h.insecure)
 	if err != nil {
 		level.Error(h.logger).Log(err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "http-statuscode", resp.Status)
-		return nil, err
+		return nil, nil, err
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error reading response of request for "+endpoint, "err", err.Error())
-		return nil, err
+		return nil, nil, err
 	}
-	return body, nil
+	return body, resp.Header, nil
 }
 
 func checkHarborVersion(h *HarborExporter) error {
@@ -247,6 +300,14 @@ func checkHarborVersion(h *HarborExporter) error {
 		return errors.New("unable to determine harbor version")
 	}
 	return nil
+}
+
+func reportLatency(start time.Time, metric string, ch chan<- prometheus.Metric) {
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		allMetrics[metric].Desc, allMetrics[metric].Type, latency,
+	)
 }
 
 // Describe describes all the metrics ever exported by the Harbor exporter. It
@@ -353,6 +414,7 @@ func main() {
 	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
+	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&harborInstance.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)

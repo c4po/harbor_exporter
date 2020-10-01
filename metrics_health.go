@@ -2,13 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (e *HarborExporter) collectHealthMetric(ch chan<- prometheus.Metric) bool {
-
+	start := time.Now()
 	type scanMetric struct {
 		Status     string `json:"status"`
 		Components []struct {
@@ -34,5 +35,6 @@ func (e *HarborExporter) collectHealthMetric(ch chan<- prometheus.Metric) bool {
 		)
 	}
 
+	reportLatency(start, "health_latency", ch)
 	return true
 }

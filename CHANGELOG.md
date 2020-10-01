@@ -1,3 +1,15 @@
+## [v0.5.5]
+
+FEATURES:
+
+- [#47](https://github.com/c4po/harbor_exporter/pull/47): Report the latency of gathered metrics
+
+## [v0.5.4]
+
+FIX BUG:
+
+- [#29](https://github.com/c4po/harbor_exporter/issues/29): add `harbor.pagesize` and fetch all results from paginated APIs
+
 ## [v0.5.2]
 
 FEATURES:

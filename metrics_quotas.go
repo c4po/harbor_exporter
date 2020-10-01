@@ -9,6 +9,7 @@ import (
 )
 
 func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 
 	type quotaMetric []struct {
 		Id  float64
@@ -28,15 +29,20 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			Storage float64
 		}
 	}
-	body, _ := e.request("/quotas")
 	var data quotaMetric
+	err := e.requestAll("/quotas", func(pageBody []byte) error {
+		var pageData quotaMetric
+		if err := json.Unmarshal(pageBody, &pageData); err != nil {
+			return err
+		}
+		data = append(data, pageData...)
 
-	if err := json.Unmarshal(body, &data); err != nil {
+		return nil
+	})
+	if err != nil {
 		level.Error(e.logger).Log(err.Error())
 		return false
 	}
-
-	level.Debug(e.logger).Log("body", body)
 
 	for i := range data {
 		if data[i].Ref.Name == "" || data[i].Ref.Id == 0 {
@@ -57,5 +63,7 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			)
 		}
 	}
+
+	reportLatency(start, "quotas_latency", ch)
 	return true
 }

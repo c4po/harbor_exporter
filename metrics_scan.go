@@ -5,9 +5,11 @@ import (
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
+	"time"
 )
 
 func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 
 	type scanMetric struct {
 		Total     float64
@@ -36,5 +38,7 @@ func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 	ch <- prometheus.MustNewConstMetric(
 		allMetrics["scans_completed"].Desc, allMetrics["scans_completed"].Type, float64(data.Completed),
 	)
+
+	reportLatency(start, "scans_latency", ch)
 	return true
 }
