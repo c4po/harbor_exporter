@@ -9,6 +9,7 @@ import (
 )
 
 func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 
 	type quotaMetric []struct {
 		Id  float64
@@ -62,5 +63,7 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 			)
 		}
 	}
+
+	reportLatency(start, "quotas_latency", ch)
 	return true
 }

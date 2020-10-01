@@ -1,3 +1,9 @@
+## [v0.5.5]
+
+FEATURES:
+
+- [#47](https://github.com/c4po/harbor_exporter/pull/47): Report the latency of gathered metrics
+
 ## [v0.5.4]
 
 FIX BUG:
