@@ -1,3 +1,9 @@
+## [v0.5.6]
+
+FEATURES:
+
+- [#49](https://github.com/c4po/harbor_exporter/pull/49): Add systeminfo metrics
+
 ## [v0.5.5]
 
 FEATURES:
