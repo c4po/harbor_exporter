@@ -100,19 +100,26 @@ func createMetrics(instanceName string) {
 	allMetrics["up"] = newMetricInfo(instanceName, "up", "Was the last query of harbor successful.", prometheus.GaugeValue, nil, nil)
 	allMetrics["health"] = newMetricInfo(instanceName, "health", "Harbor overall health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, nil, nil)
 	allMetrics["components_health"] = newMetricInfo(instanceName, "components_health", "Harbor components health status: Healthy = 1, Unhealthy = 0", prometheus.GaugeValue, componentLabelNames, nil)
+	allMetrics["health_latency"] = newMetricInfo(instanceName, "health_latency", "Time in seconds to collect health metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_total"] = newMetricInfo(instanceName, "scans_total", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_completed"] = newMetricInfo(instanceName, "scans_completed", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
 	allMetrics["scans_requester"] = newMetricInfo(instanceName, "scans_requester", "metrics of the latest scan all process", prometheus.GaugeValue, nil, nil)
+	allMetrics["scans_latency"] = newMetricInfo(instanceName, "scans_latency", "Time in seconds to collect scan metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["project_count_total"] = newMetricInfo(instanceName, "project_count_total", "projects number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
 	allMetrics["repo_count_total"] = newMetricInfo(instanceName, "repo_count_total", "repositories number relevant to the user", prometheus.GaugeValue, typeLabelNames, nil)
+	allMetrics["statistics_latency"] = newMetricInfo(instanceName, "statistics_latency", "Time in seconds to collect statistics metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["quotas_count_total"] = newMetricInfo(instanceName, "quotas_count_total", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
 	allMetrics["quotas_size_bytes"] = newMetricInfo(instanceName, "quotas_size_bytes", "quotas", prometheus.GaugeValue, quotaLabelNames, nil)
+	allMetrics["quotas_latency"] = newMetricInfo(instanceName, "quotas_latency", "Time in seconds to collect quota metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["system_volumes_bytes"] = newMetricInfo(instanceName, "system_volumes_bytes", "Get system volume info (total/free size).", prometheus.GaugeValue, storageLabelNames, nil)
+	allMetrics["system_volumes_latency"] = newMetricInfo(instanceName, "system_volumes_latency", "Time in seconds to collect system_volume metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["repositories_pull_total"] = newMetricInfo(instanceName, "repositories_pull_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	allMetrics["repositories_star_total"] = newMetricInfo(instanceName, "repositories_star_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
 	allMetrics["repositories_tags_total"] = newMetricInfo(instanceName, "repositories_tags_total", "Get public repositories which are accessed most.).", prometheus.GaugeValue, repoLabelNames, nil)
+	allMetrics["repositories_latency"] = newMetricInfo(instanceName, "repositories_latency", "Time in seconds to collect repository metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["replication_status"] = newMetricInfo(instanceName, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
 	allMetrics["replication_tasks"] = newMetricInfo(instanceName, "replication_tasks", "Get number of replication tasks, with various results, in the latest execution of this replication policy.", prometheus.GaugeValue, replicationTaskLabelNames, nil)
+	allMetrics["replication_latency"] = newMetricInfo(instanceName, "replication_latency", "Time in seconds to collect replication metrics", prometheus.GaugeValue, nil, nil)
 }
 
 type promHTTPLogger struct {
@@ -283,6 +290,14 @@ func checkHarborVersion(h *HarborExporter) error {
 		return errors.New("unable to determine harbor version")
 	}
 	return nil
+}
+
+func reportLatency(start time.Time, metric string, ch chan<- prometheus.Metric) {
+	end := time.Now()
+	latency := end.Sub(start).Seconds()
+	ch <- prometheus.MustNewConstMetric(
+		allMetrics[metric].Desc, allMetrics[metric].Type, latency,
+	)
 }
 
 // Describe describes all the metrics ever exported by the Harbor exporter. It

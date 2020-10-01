@@ -3,12 +3,14 @@ package main
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 	type policiesMetrics []struct {
 		Id   float64
 		Name string
@@ -73,5 +75,7 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 			)
 		}
 	}
+
+	reportLatency(start, "replication_latency", ch)
 	return true
 }

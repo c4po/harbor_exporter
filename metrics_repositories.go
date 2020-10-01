@@ -10,6 +10,7 @@ import (
 )
 
 func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
+	start := time.Now()
 	type projectsMetrics []struct {
 		Project_id  float64
 		Owner_id    float64
@@ -127,5 +128,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			}
 		}
 	}
+
+	reportLatency(start, "repositories_latency", ch)
 	return true
 }
