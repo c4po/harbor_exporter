@@ -151,6 +151,7 @@ type HarborExporter struct {
 	logger   log.Logger
 	isV2     bool
 	pageSize int
+	client   *http.Client
 	// Cache-releated
 	cacheEnabled    bool
 	cacheDuration   time.Duration
@@ -241,13 +242,7 @@ func (h *HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 	}
 	req.SetBasicAuth(h.username, h.password)
 
-	client, err := getHttpClient(h.insecure)
-	if err != nil {
-		level.Error(h.logger).Log(err.Error())
-		return nil, nil, err
-	}
-
-	resp, err := client.Do(req)
+	resp, err := h.client.Do(req)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil, nil, err
@@ -268,13 +263,7 @@ func (h *HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 }
 
 func checkHarborVersion(h *HarborExporter) error {
-	client, err := getHttpClient(h.insecure)
-	if err != nil {
-		level.Error(h.logger).Log(err.Error())
-		return err
-	}
-
-	resp, err := client.Get(h.uri + "/api/systeminfo")
+	resp, err := h.client.Get(h.uri + "/api/systeminfo")
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
@@ -285,7 +274,7 @@ func checkHarborVersion(h *HarborExporter) error {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "err", err)
 	}
 
-	resp, err = client.Get(h.uri + "/api/v2.0/systeminfo")
+	resp, err = h.client.Get(h.uri + "/api/v2.0/systeminfo")
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
@@ -432,6 +421,13 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
+	client, err := getHttpClient(harborInstance.insecure)
+	if err != nil {
+		level.Error(logger).Log("msg", "Failed to create HTTP client")
+		os.Exit(1)
+	}
+	harborInstance.client = client
+
 	level.Info(logger).Log("CacheEnabled", harborInstance.cacheEnabled)
 	level.Info(logger).Log("CacheDuration", harborInstance.cacheDuration)
 
@@ -452,7 +448,7 @@ func main() {
 
 	harborInstance.logger = logger
 
-	err := checkHarborVersion(harborInstance)
+	err = checkHarborVersion(harborInstance)
 	if err != nil {
 		level.Error(logger).Log("msg", "cannot get harbor api version", "err", err)
 		os.Exit(1)
