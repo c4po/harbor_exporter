@@ -395,21 +395,21 @@ func Btoi(b bool) int8 {
 
 func main() {
 	var (
-		listenAddress  = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
-		metricsPath    = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-		harborInstance = NewHarborExporter()
+		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
+		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+		exporter      = NewHarborExporter()
 	)
 
-	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&harborInstance.instance)
-	kingpin.Flag("harbor.server", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)").Envar("HARBOR_URI").Default("http://localhost:8500").StringVar(&harborInstance.uri)
-	kingpin.Flag("harbor.username", "username").Envar("HARBOR_USERNAME").Default("admin").StringVar(&harborInstance.username)
-	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
-	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
-	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
-	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&harborInstance.pageSize)
+	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&exporter.instance)
+	kingpin.Flag("harbor.server", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)").Envar("HARBOR_URI").Default("http://localhost:8500").StringVar(&exporter.uri)
+	kingpin.Flag("harbor.username", "username").Envar("HARBOR_USERNAME").Default("admin").StringVar(&exporter.username)
+	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&exporter.password)
+	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&exporter.timeout)
+	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
+	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&exporter.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
-	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
-	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)
+	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&exporter.cacheEnabled)
+	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&exporter.cacheDuration)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
@@ -417,15 +417,15 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	client, err := getHttpClient(harborInstance.insecure)
+	client, err := getHttpClient(exporter.insecure)
 	if err != nil {
 		level.Error(logger).Log("msg", "Failed to create HTTP client")
 		os.Exit(1)
 	}
-	harborInstance.client = client
+	exporter.client = client
 
-	level.Info(logger).Log("CacheEnabled", harborInstance.cacheEnabled)
-	level.Info(logger).Log("CacheDuration", harborInstance.cacheDuration)
+	level.Info(logger).Log("CacheEnabled", exporter.cacheEnabled)
+	level.Info(logger).Log("CacheDuration", exporter.cacheDuration)
 
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
@@ -442,17 +442,17 @@ func main() {
 		level.Info(logger).Log("metrics_group", k, "collect", v)
 	}
 
-	harborInstance.logger = logger
+	exporter.logger = logger
 
-	err = checkHarborVersion(harborInstance)
+	err = checkHarborVersion(exporter)
 	if err != nil {
 		level.Error(logger).Log("msg", "cannot get harbor api version", "err", err)
 		os.Exit(1)
 	}
 
-	createMetrics(harborInstance.instance)
+	createMetrics(exporter.instance)
 
-	prometheus.MustRegister(harborInstance)
+	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(version.NewCollector("harbor_exporter"))
 
 	http.Handle(*metricsPath, promhttp.Handler())
