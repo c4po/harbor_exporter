@@ -8,7 +8,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectHealthMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectHealthMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type scanMetric struct {
 		Status     string `json:"status"`
@@ -17,11 +17,11 @@ func (e *HarborExporter) collectHealthMetric(ch chan<- prometheus.Metric) bool {
 			Status string `json:"status"`
 		}
 	}
-	body, _ := e.request("/health")
+	body, _ := h.request("/health")
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 

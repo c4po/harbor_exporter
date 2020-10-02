@@ -7,7 +7,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectSystemMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectSystemMetric(ch chan<- prometheus.Metric) bool {
 
 	type systemInfoMetric struct {
 		WithNotary                  bool   `json:"with_notary"`
@@ -21,11 +21,11 @@ func (e *HarborExporter) collectSystemMetric(ch chan<- prometheus.Metric) bool {
 		WithChartmuseum             bool   `json:"with_chartmuseum"`
 		NotificationEnable          bool   `json:"notification_enable"`
 	}
-	body, _ := e.request("/systeminfo")
+	body, _ := h.request("/systeminfo")
 	var data systemInfoMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 

@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
 	type quotaMetric []struct {
@@ -30,7 +30,7 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		}
 	}
 	var data quotaMetric
-	err := e.requestAll("/quotas", func(pageBody []byte) error {
+	err := h.requestAll("/quotas", func(pageBody []byte) error {
 		var pageData quotaMetric
 		if err := json.Unmarshal(pageBody, &pageData); err != nil {
 			return err
@@ -40,13 +40,13 @@ func (e *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 		return nil
 	})
 	if err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 
 	for i := range data {
 		if data[i].Ref.Name == "" || data[i].Ref.Id == 0 {
-			level.Debug(e.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
+			level.Debug(h.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
 		} else {
 			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(

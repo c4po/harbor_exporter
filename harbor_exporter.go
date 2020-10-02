@@ -190,12 +190,12 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 	return client, nil
 }
 
-func (h HarborExporter) request(endpoint string) ([]byte, error) {
+func (h *HarborExporter) request(endpoint string) ([]byte, error) {
 	body, _, err := h.fetch(endpoint)
 	return body, err
 }
 
-func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
+func (h *HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
 	page := 1
 	separator := "?"
 	if strings.Index(endpoint, separator) > 0 {
@@ -232,7 +232,7 @@ func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error)
 	return nil
 }
 
-func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
+func (h *HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 	level.Debug(h.logger).Log("endpoint", endpoint)
 	req, err := http.NewRequest("GET", h.uri+h.apiPath+endpoint, nil)
 	if err != nil {
@@ -312,7 +312,7 @@ func reportLatency(start time.Time, metric string, ch chan<- prometheus.Metric) 
 
 // Describe describes all the metrics ever exported by the Harbor exporter. It
 // implements prometheus.Collector.
-func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
+func (h *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 	for _, m := range allMetrics {
 		ch <- m.Desc
 	}
@@ -320,20 +320,20 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
-func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
-	if e.cacheEnabled {
-		e.collectMutex.Lock()
-		defer e.collectMutex.Unlock()
-		expiry := e.lastCollectTime.Add(e.cacheDuration)
+func (h *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
+	if h.cacheEnabled {
+		h.collectMutex.Lock()
+		defer h.collectMutex.Unlock()
+		expiry := h.lastCollectTime.Add(h.cacheDuration)
 		if time.Now().Before(expiry) {
 			// Return cached
-			for _, cachedMetric := range e.cache {
+			for _, cachedMetric := range h.cache {
 				outCh <- cachedMetric
 			}
 			return
 		}
 		// Reset cache for fresh sampling, but re-use underlying array
-		e.cache = e.cache[:0]
+		h.cache = h.cache[:0]
 	}
 
 	samplesCh := make(chan prometheus.Metric)
@@ -343,8 +343,8 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	go func() {
 		for metric := range samplesCh {
 			outCh <- metric
-			if e.cacheEnabled {
-				e.cache = append(e.cache, metric)
+			if h.cacheEnabled {
+				h.cache = append(h.cache, metric)
 			}
 		}
 		wg.Done()
@@ -352,28 +352,28 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 
 	ok := true
 	if collectMetricsGroup[metricsGroupHealth] {
-		ok = e.collectHealthMetric(samplesCh) && ok
+		ok = h.collectHealthMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupScans] {
-		ok = e.collectScanMetric(samplesCh) && ok
+		ok = h.collectScanMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectStatisticsMetric(samplesCh) && ok
+		ok = h.collectStatisticsMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectSystemVolumesMetric(samplesCh) && ok
+		ok = h.collectSystemVolumesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupQuotas] {
-		ok = e.collectQuotasMetric(samplesCh) && ok
+		ok = h.collectQuotasMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupRepositories] {
-		ok = e.collectRepositoriesMetric(samplesCh) && ok
+		ok = h.collectRepositoriesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupReplication] {
-		ok = e.collectReplicationsMetric(samplesCh) && ok
+		ok = h.collectReplicationsMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupSystemInfo] {
-		ok = e.collectSystemMetric(samplesCh)
+		ok = h.collectSystemMetric(samplesCh)
 	}
 
 	if ok {
@@ -389,7 +389,7 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	}
 
 	close(samplesCh)
-	e.lastCollectTime = time.Now()
+	h.lastCollectTime = time.Now()
 	wg.Wait()
 }
 
