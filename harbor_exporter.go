@@ -27,9 +27,6 @@ import (
 	"sync"
 	"time"
 
-	// "strings"
-	// "net/url"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,7 +69,6 @@ var (
 	componentLabelNames       = []string{"component"}
 	typeLabelNames            = []string{"type"}
 	quotaLabelNames           = []string{"type", "repo_name", "repo_id"}
-	serverLabelNames          = []string{"storage"}
 	repoLabelNames            = []string{"repo_name", "repo_id"}
 	storageLabelNames         = []string{"storage"}
 	replicationLabelNames     = []string{"repl_pol_name"}
