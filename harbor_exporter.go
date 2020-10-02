@@ -148,7 +148,7 @@ type HarborExporter struct {
 	isV2     bool
 	pageSize int
 	client   *http.Client
-	// Cache-releated
+	// Cache-related
 	cacheEnabled    bool
 	cacheDuration   time.Duration
 	lastCollectTime time.Time
