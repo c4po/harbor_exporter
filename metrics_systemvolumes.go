@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type systemVolumesMetric struct {
 		Storage struct {
@@ -15,10 +15,10 @@ func (e *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric)
 			Free  float64
 		}
 	}
-	body, _ := e.request("/systeminfo/volumes")
+	body, _ := h.request("/systeminfo/volumes")
 	var data systemVolumesMetric
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 

@@ -1,3 +1,8 @@
+## [v0.5.7]
+FIX BUG:
+
+- [#52](https://github.com/c4po/harbor_exporter/issues/52): Fix memory leaking issue.
+
 ## [v0.5.6]
 
 FEATURES:

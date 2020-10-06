@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type policiesMetrics []struct {
 		Id   float64
@@ -26,7 +26,7 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 	}
 
 	var policiesData policiesMetrics
-	err := e.requestAll("/replication/policies", func(pageBody []byte) error {
+	err := h.requestAll("/replication/policies", func(pageBody []byte) error {
 		var pageData policiesMetrics
 		if err := json.Unmarshal(pageBody, &pageData); err != nil {
 			return err
@@ -36,7 +36,7 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		return nil
 	})
 	if err != nil {
-		level.Error(e.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
+		level.Error(h.logger).Log("msg", "Error retrieving replication policies", "err", err.Error())
 		return false
 	}
 
@@ -44,11 +44,11 @@ func (e *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
 		policyName := policiesData[i].Name
 
-		body, _ := e.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
+		body, _ := h.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
 		var data policyMetric
 
 		if err := json.Unmarshal(body, &data); err != nil {
-			level.Error(e.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
+			level.Error(h.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
 			return false
 		}
 

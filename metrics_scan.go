@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
 	type scanMetric struct {
@@ -18,11 +18,11 @@ func (e *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		Requester string
 		Ongoing   bool
 	}
-	body, _ := e.request("/scans/all/metrics")
+	body, _ := h.request("/scans/all/metrics")
 	var data scanMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 
