@@ -9,7 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type projectsMetrics []struct {
 		Project_id  float64
@@ -51,7 +51,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		Update_time    time.Time
 	}
 	var projectsData projectsMetrics
-	err := e.requestAll("/projects", func(pageBody []byte) error {
+	err := h.requestAll("/projects", func(pageBody []byte) error {
 		var pageData projectsMetrics
 		if err := json.Unmarshal(pageBody, &pageData); err != nil {
 			return err
@@ -61,15 +61,15 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		return nil
 	})
 	if err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 
 	for i := range projectsData {
 		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
-		if e.isV2 {
+		if h.isV2 {
 			var data repositoriesMetricV2
-			err := e.requestAll("/projects/"+projectsData[i].Name+"/repositories", func(pageBody []byte) error {
+			err := h.requestAll("/projects/"+projectsData[i].Name+"/repositories", func(pageBody []byte) error {
 				var pageData repositoriesMetricV2
 				if err := json.Unmarshal(pageBody, &pageData); err != nil {
 					return err
@@ -80,7 +80,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 				return nil
 			})
 			if err != nil {
-				level.Error(e.logger).Log(err.Error())
+				level.Error(h.logger).Log(err.Error())
 				return false
 			}
 
@@ -99,7 +99,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 
 		} else {
 			var data repositoriesMetric
-			err := e.requestAll("/repositories?project_id="+projectId, func(pageBody []byte) error {
+			err := h.requestAll("/repositories?project_id="+projectId, func(pageBody []byte) error {
 				var pageData repositoriesMetric
 				if err := json.Unmarshal(pageBody, &pageData); err != nil {
 					return err
@@ -110,7 +110,7 @@ func (e *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 				return nil
 			})
 			if err != nil {
-				level.Error(e.logger).Log(err.Error())
+				level.Error(h.logger).Log(err.Error())
 				return false
 			}
 

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func (e *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
+func (h *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
 	type statisticsMetric struct {
@@ -19,12 +19,12 @@ func (e *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bo
 		Private_repo_count    float64
 	}
 
-	body, _ := e.request("/statistics")
+	body, _ := h.request("/statistics")
 
 	var data statisticsMetric
 
 	if err := json.Unmarshal(body, &data); err != nil {
-		level.Error(e.logger).Log(err.Error())
+		level.Error(h.logger).Log(err.Error())
 		return false
 	}
 

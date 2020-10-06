@@ -27,9 +27,6 @@ import (
 	"sync"
 	"time"
 
-	// "strings"
-	// "net/url"
-
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
@@ -72,7 +69,6 @@ var (
 	componentLabelNames       = []string{"component"}
 	typeLabelNames            = []string{"type"}
 	quotaLabelNames           = []string{"type", "repo_name", "repo_id"}
-	serverLabelNames          = []string{"storage"}
 	repoLabelNames            = []string{"repo_name", "repo_id"}
 	storageLabelNames         = []string{"storage"}
 	replicationLabelNames     = []string{"repl_pol_name"}
@@ -151,7 +147,8 @@ type HarborExporter struct {
 	logger   log.Logger
 	isV2     bool
 	pageSize int
-	// Cache-releated
+	client   *http.Client
+	// Cache-related
 	cacheEnabled    bool
 	cacheDuration   time.Duration
 	lastCollectTime time.Time
@@ -190,12 +187,12 @@ func getHttpClient(skipVerify bool) (*http.Client, error) {
 	return client, nil
 }
 
-func (h HarborExporter) request(endpoint string) ([]byte, error) {
+func (h *HarborExporter) request(endpoint string) ([]byte, error) {
 	body, _, err := h.fetch(endpoint)
 	return body, err
 }
 
-func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
+func (h *HarborExporter) requestAll(endpoint string, callback func([]byte) error) error {
 	page := 1
 	separator := "?"
 	if strings.Index(endpoint, separator) > 0 {
@@ -232,7 +229,7 @@ func (h HarborExporter) requestAll(endpoint string, callback func([]byte) error)
 	return nil
 }
 
-func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
+func (h *HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 	level.Debug(h.logger).Log("endpoint", endpoint)
 	req, err := http.NewRequest("GET", h.uri+h.apiPath+endpoint, nil)
 	if err != nil {
@@ -241,13 +238,7 @@ func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 	}
 	req.SetBasicAuth(h.username, h.password)
 
-	client, err := getHttpClient(h.insecure)
-	if err != nil {
-		level.Error(h.logger).Log(err.Error())
-		return nil, nil, err
-	}
-
-	resp, err := client.Do(req)
+	resp, err := h.client.Do(req)
 	if err != nil {
 		level.Error(h.logger).Log("msg", "Error handling request for "+endpoint, "err", err.Error())
 		return nil, nil, err
@@ -268,13 +259,7 @@ func (h HarborExporter) fetch(endpoint string) ([]byte, http.Header, error) {
 }
 
 func checkHarborVersion(h *HarborExporter) error {
-	client, err := getHttpClient(h.insecure)
-	if err != nil {
-		level.Error(h.logger).Log(err.Error())
-		return err
-	}
-
-	resp, err := client.Get(h.uri + "/api/systeminfo")
+	resp, err := h.client.Get(h.uri + "/api/systeminfo")
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
@@ -285,7 +270,7 @@ func checkHarborVersion(h *HarborExporter) error {
 		level.Info(h.logger).Log("msg", "check v1 with /api/systeminfo", "err", err)
 	}
 
-	resp, err = client.Get(h.uri + "/api/v2.0/systeminfo")
+	resp, err = h.client.Get(h.uri + "/api/v2.0/systeminfo")
 	if err == nil {
 		level.Info(h.logger).Log("msg", "check v2 with /api/v2.0/systeminfo", "code", resp.StatusCode)
 		if resp.StatusCode == 200 {
@@ -312,7 +297,7 @@ func reportLatency(start time.Time, metric string, ch chan<- prometheus.Metric) 
 
 // Describe describes all the metrics ever exported by the Harbor exporter. It
 // implements prometheus.Collector.
-func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
+func (h *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 	for _, m := range allMetrics {
 		ch <- m.Desc
 	}
@@ -320,20 +305,20 @@ func (e *HarborExporter) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect fetches the stats from configured Harbor location and delivers them
 // as Prometheus metrics. It implements prometheus.Collector.
-func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
-	if e.cacheEnabled {
-		e.collectMutex.Lock()
-		defer e.collectMutex.Unlock()
-		expiry := e.lastCollectTime.Add(e.cacheDuration)
+func (h *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
+	if h.cacheEnabled {
+		h.collectMutex.Lock()
+		defer h.collectMutex.Unlock()
+		expiry := h.lastCollectTime.Add(h.cacheDuration)
 		if time.Now().Before(expiry) {
 			// Return cached
-			for _, cachedMetric := range e.cache {
+			for _, cachedMetric := range h.cache {
 				outCh <- cachedMetric
 			}
 			return
 		}
 		// Reset cache for fresh sampling, but re-use underlying array
-		e.cache = e.cache[:0]
+		h.cache = h.cache[:0]
 	}
 
 	samplesCh := make(chan prometheus.Metric)
@@ -343,8 +328,8 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	go func() {
 		for metric := range samplesCh {
 			outCh <- metric
-			if e.cacheEnabled {
-				e.cache = append(e.cache, metric)
+			if h.cacheEnabled {
+				h.cache = append(h.cache, metric)
 			}
 		}
 		wg.Done()
@@ -352,28 +337,28 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 
 	ok := true
 	if collectMetricsGroup[metricsGroupHealth] {
-		ok = e.collectHealthMetric(samplesCh) && ok
+		ok = h.collectHealthMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupScans] {
-		ok = e.collectScanMetric(samplesCh) && ok
+		ok = h.collectScanMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectStatisticsMetric(samplesCh) && ok
+		ok = h.collectStatisticsMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupStatistics] {
-		ok = e.collectSystemVolumesMetric(samplesCh) && ok
+		ok = h.collectSystemVolumesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupQuotas] {
-		ok = e.collectQuotasMetric(samplesCh) && ok
+		ok = h.collectQuotasMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupRepositories] {
-		ok = e.collectRepositoriesMetric(samplesCh) && ok
+		ok = h.collectRepositoriesMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupReplication] {
-		ok = e.collectReplicationsMetric(samplesCh) && ok
+		ok = h.collectReplicationsMetric(samplesCh) && ok
 	}
 	if collectMetricsGroup[metricsGroupSystemInfo] {
-		ok = e.collectSystemMetric(samplesCh)
+		ok = h.collectSystemMetric(samplesCh)
 	}
 
 	if ok {
@@ -389,7 +374,7 @@ func (e *HarborExporter) Collect(outCh chan<- prometheus.Metric) {
 	}
 
 	close(samplesCh)
-	e.lastCollectTime = time.Now()
+	h.lastCollectTime = time.Now()
 	wg.Wait()
 }
 
@@ -410,21 +395,21 @@ func Btoi(b bool) int8 {
 
 func main() {
 	var (
-		listenAddress  = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
-		metricsPath    = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-		harborInstance = NewHarborExporter()
+		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9107").String()
+		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
+		exporter      = NewHarborExporter()
 	)
 
-	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&harborInstance.instance)
-	kingpin.Flag("harbor.server", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)").Envar("HARBOR_URI").Default("http://localhost:8500").StringVar(&harborInstance.uri)
-	kingpin.Flag("harbor.username", "username").Envar("HARBOR_USERNAME").Default("admin").StringVar(&harborInstance.username)
-	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&harborInstance.password)
-	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&harborInstance.timeout)
-	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&harborInstance.insecure)
-	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&harborInstance.pageSize)
+	kingpin.Flag("harbor.instance", "Logical name for the Harbor instance to monitor").Envar("HARBOR_INSTANCE").Default("").StringVar(&exporter.instance)
+	kingpin.Flag("harbor.server", "HTTP API address of a harbor server or agent. (prefix with https:// to connect over HTTPS)").Envar("HARBOR_URI").Default("http://localhost:8500").StringVar(&exporter.uri)
+	kingpin.Flag("harbor.username", "username").Envar("HARBOR_USERNAME").Default("admin").StringVar(&exporter.username)
+	kingpin.Flag("harbor.password", "password").Envar("HARBOR_PASSWORD").Default("password").StringVar(&exporter.password)
+	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&exporter.timeout)
+	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
+	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("500").IntVar(&exporter.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
-	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&harborInstance.cacheEnabled)
-	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&harborInstance.cacheDuration)
+	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&exporter.cacheEnabled)
+	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&exporter.cacheDuration)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)
@@ -432,8 +417,15 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	level.Info(logger).Log("CacheEnabled", harborInstance.cacheEnabled)
-	level.Info(logger).Log("CacheDuration", harborInstance.cacheDuration)
+	client, err := getHttpClient(exporter.insecure)
+	if err != nil {
+		level.Error(logger).Log("msg", "Failed to create HTTP client")
+		os.Exit(1)
+	}
+	exporter.client = client
+
+	level.Info(logger).Log("CacheEnabled", exporter.cacheEnabled)
+	level.Info(logger).Log("CacheDuration", exporter.cacheDuration)
 
 	level.Info(logger).Log("msg", "Starting harbor_exporter", "version", version.Info())
 	level.Info(logger).Log("build_context", version.BuildContext())
@@ -450,17 +442,17 @@ func main() {
 		level.Info(logger).Log("metrics_group", k, "collect", v)
 	}
 
-	harborInstance.logger = logger
+	exporter.logger = logger
 
-	err := checkHarborVersion(harborInstance)
+	err = checkHarborVersion(exporter)
 	if err != nil {
 		level.Error(logger).Log("msg", "cannot get harbor api version", "err", err)
 		os.Exit(1)
 	}
 
-	createMetrics(harborInstance.instance)
+	createMetrics(exporter.instance)
 
-	prometheus.MustRegister(harborInstance)
+	prometheus.MustRegister(exporter)
 	prometheus.MustRegister(version.NewCollector("harbor_exporter"))
 
 	http.Handle(*metricsPath, promhttp.Handler())
