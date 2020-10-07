@@ -74,6 +74,7 @@ var (
 	replicationLabelNames     = []string{"repl_pol_name"}
 	replicationTaskLabelNames = []string{"repl_pol_name", "result"}
 	systemInfoLabelNames      = []string{"auth_mode", "project_creation_restriction", "harbor_version", "registry_storage_provider_name"}
+	imageNames                = []string{"image"}
 )
 
 type metricInfo struct {
@@ -126,6 +127,7 @@ func createMetrics(instanceName string) {
 	allMetrics["system_with_chartmuseum"] = newMetricInfo(instanceName, "system_with_chartmuseum", "If harbor has chartmuseum enabled", prometheus.GaugeValue, nil, nil)
 	allMetrics["system_notification_enable"] = newMetricInfo(instanceName, "system_notification_enable", "If notifications are enabled", prometheus.GaugeValue, nil, nil)
 	allMetrics["replication_latency"] = newMetricInfo(instanceName, "replication_latency", "Time in seconds to collect replication metrics", prometheus.GaugeValue, nil, nil)
+	allMetrics["image_vulnerability"] = newMetricInfo(instanceName, "image_vulnerability", "Get image vulnerability scan: None = 0, Low = 1, Medium = 2, High = 3, Critical = 4 ", prometheus.GaugeValue, imageNames, nil)
 }
 
 type promHTTPLogger struct {

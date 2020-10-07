@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-kit/kit/log/level"
@@ -50,6 +51,12 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 		Creation_time  time.Time
 		Update_time    time.Time
 	}
+	type artifactsMetric []struct {
+		Id   float64
+		Tags []struct {
+			Name string
+		}
+	}
 	var projectsData projectsMetrics
 	err := h.requestAll("/projects", func(pageBody []byte) error {
 		var pageData projectsMetrics
@@ -83,6 +90,7 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 				level.Error(h.logger).Log(err.Error())
 				return false
 			}
+			projectName := projectsData[i].Name
 
 			for i := range data {
 				repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
@@ -95,6 +103,52 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 				ch <- prometheus.MustNewConstMetric(
 					allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].Artifact_count, data[i].Name, repoId,
 				)
+
+				repoName := strings.Split(data[i].Name, "/")
+				tagBody, _ := h.request("/projects/" + projectName + "/repositories/" + repoName[1] + "/artifacts?with_tag=true&with_scan_overview=true")
+				var scanData []map[string]interface{}
+
+				var tagData artifactsMetric
+				if err := json.Unmarshal(tagBody, &tagData); err != nil {
+					level.Error(h.logger).Log(err.Error())
+					return false
+				}
+
+				json.Unmarshal([]byte(tagBody), &scanData)
+				if len(scanData) == 0 {
+					continue
+				}
+				for key, scanData := range scanData {
+					tagName := tagData[key].Tags[0]
+
+					if len(scanData) < 16 {
+
+						continue
+					}
+					scan_overview := scanData["scan_overview"].(map[string]interface{})
+					severity := scan_overview["application/vnd.scanner.adapter.vuln.report.harbor+json; version=1.0"].(map[string]interface{})
+
+					var vurnerability float64
+					if severity["severity"] == "None" {
+						vurnerability = 0
+					}
+					if severity["severity"] == "Low" {
+						vurnerability = 1
+					}
+					if severity["severity"] == "Medium" {
+						vurnerability = 2
+					}
+					if severity["severity"] == "High" {
+						vurnerability = 3
+					}
+					if severity["severity"] == "Critical" {
+						vurnerability = 4
+					}
+					image := data[i].Name + ":" + tagName.Name
+					ch <- prometheus.MustNewConstMetric(
+						allMetrics["image_vulnerability"].Desc, allMetrics["image_vulnerability"].Type, vurnerability, image,
+					)
+				}
 			}
 
 		} else {
