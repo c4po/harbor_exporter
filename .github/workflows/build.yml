@@ -39,5 +39,5 @@ jobs:
 
     - uses: actions/upload-artifact@v2
       with:
-        name: my-harbor_exporter
+        name: harbor_exporter
         path: releases/harbor_exporter
