@@ -32,7 +32,12 @@ jobs:
         go get -v -t -d ./...
 
     - name: Build
-      run: go build -v .
+      run: make build
 
     # - name: Test
     #   run: go test -v .
+
+    - uses: actions/upload-artifact@v2
+      with:
+        name: harbor_exporter
+        path: releases/harbor_exporter
