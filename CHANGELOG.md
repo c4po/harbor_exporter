@@ -1,3 +1,9 @@
+## [v0.5.6]
+
+FEATURES:
+
+- [#63](https://github.com/c4po/harbor_exporter/pull/63): Read caching settings from environment variable
+
 ## [v0.5.7]
 FIX BUG:
 

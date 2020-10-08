@@ -408,8 +408,8 @@ func main() {
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
 	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("100").IntVar(&exporter.pageSize)
 	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
-	kingpin.Flag("cache.enabled", "Enable metrics caching.").Default("false").BoolVar(&exporter.cacheEnabled)
-	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Default("20s").DurationVar(&exporter.cacheDuration)
+	kingpin.Flag("cache.enabled", "Enable metrics caching.").Envar("HARBOR_CACHE_ENABLED").Default("false").BoolVar(&exporter.cacheEnabled)
+	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Envar("HARBOR_CACHE_DURATION").Default("20s").DurationVar(&exporter.cacheDuration)
 
 	promlogConfig := &promlog.Config{}
 	flag.AddFlags(kingpin.CommandLine, promlogConfig)

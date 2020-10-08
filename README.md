@@ -81,6 +81,7 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 ```
 ./harbor_exporter --cache.enabled --cache.duration 30s
 ```
+This can also be configured via the environment variables `HARBOR_CACHE_ENABLED` and `HARBOR_CACHE_DURATION`.
 
 ---
 `harbor.pagesize` - Set page size for results. Can be also set with Environment variable `HARBOR_PAGESIZE`
@@ -94,6 +95,8 @@ HARBOR_INSTANCE
 HARBOR_URI
 HARBOR_USERNAME
 HARBOR_PASSWORD
+HARBOR_CACHE_ENABLED
+HARBOR_CACHE_DURATION
 ```
 
 ## Using Docker
