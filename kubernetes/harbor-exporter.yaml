@@ -61,6 +61,11 @@ spec:
 #                configMapKeyRef:
 #                  name: prefix-harbor-core # change prefix to the name of your Helm release
 #                  key: EXT_ENDPOINT
+##          uncomment if you want to use caching
+#           - name: HARBOR_CACHE_ENABLED
+#             value: "true"
+#           - name: HARBOR_CACHE_DURATION
+#             value: "20s"
             - name: HARBOR_USERNAME
               value: "admin"
             - name: HARBOR_PASSWORD
