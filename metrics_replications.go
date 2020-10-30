@@ -12,8 +12,12 @@ import (
 func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type policiesMetrics []struct {
-		Id   float64
-		Name string
+		Id      float64
+		Name    string
+		Enabled bool
+		Trigger struct {
+			Type string
+		}
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 	type policyMetric []struct {
@@ -41,37 +45,48 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 	}
 
 	for i := range policiesData {
-		policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
-		policyName := policiesData[i].Name
+		if (policiesData[i].Enabled == true && policiesData[i].Trigger.Type == "scheduled") {
+			policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
+			policyName := policiesData[i].Name
 
-		body, _ := h.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=1")
-		var data policyMetric
+			body, _ := h.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=2")
+			var data policyMetric
 
-		if err := json.Unmarshal(body, &data); err != nil {
-			level.Error(h.logger).Log("msg", "Error retrieving replication data for policy "+policyId, "err", err.Error())
-			return false
-		}
+			if err := json.Unmarshal(body, &data); err != nil {
+				level.Error(h.logger).Log("msg", "Error retrieving replication data for policy "+policyName+" (ID "+policyId+")", "err", err.Error())
+				return false
+			}
 
-		for i := range data {
+			if (len(data) == 0) {
+				level.Debug(h.logger).Log("msg", "Policy "+policyName+" (ID "+policyId+") has no executions yet")
+				return false
+			}
+
+			var j int = 0
+			if data[j].Status == "InProgress" && len(data) > 1 {
+				// Current is in progress: check previous replication execution
+				j = 1
+			}
+
 			var replStatus float64
 			replStatus = 0
-			if data[i].Status == "Succeed" {
+			if data[j].Status == "Succeed" {
 				replStatus = 1
 			}
 			ch <- prometheus.MustNewConstMetric(
 				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Failed, policyName, "failed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Failed, policyName, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Succeed, policyName, "succeed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].In_progress, policyName, "in_progress",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].In_progress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[i].Stopped, policyName, "stopped",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Stopped, policyName, "stopped",
 			)
 		}
 	}
