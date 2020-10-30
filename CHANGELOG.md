@@ -1,3 +1,9 @@
+## [v0.5.9]
+
+FIX BUG:
+
+- [#70](https://github.com/c4po/harbor_exporter/pull/70): Fix Issues with replication status
+
 ## [v0.5.8]
 
 FEATURES:
