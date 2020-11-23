@@ -1,0 +1,45 @@
+
+global:
+  namespace: continuous-delivery 
+  env: shared 
+  labelPrefix: devops 
+
+image:
+  repository: c4po
+  pullPolicy: IfNotPresent
+  imagePullSecret: artifact-registry-credentials
+
+deployments:
+  harbor-exporter:
+    enabled: true
+    label: harbor-exporter
+    name: harbor-exporter
+    version: debug
+    deployment:
+      envs:
+        - name: HARBOR_URI
+          value: http://harbor-harbor-core
+        - name: HARBOR_USERNAME
+          value: admin
+      secretKeyRefs:
+        - name: HARBOR_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: harbor-harbor-core 
+              key: HARBOR_ADMIN_PASSWORD      
+      ports:
+        containerPort: 9107
+      resources:
+        limits:
+          cpu: 400m
+          memory: 256Mi
+        requests:
+          cpu: 100m
+          memory: 64Mi
+      securityContext:
+        runAsUser: 1000
+    service:
+      port: 9107
+      targetPort: 9107
+      replicas: 1
+
