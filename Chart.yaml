@@ -1,0 +1,10 @@
+apiVersion: v1
+appVersion: '0.1.0'
+description: Harbor exporter
+name: harbor-exporter
+version: 0.1.0
+keywords:
+  - harbor exporter
+sources:
+  - http://github.com/polarpoint-io/harbor-exporter
+icon: https://raw.githubusercontent.com/goharbor/website/master/static/img/logos/harbor-icon-color.png
