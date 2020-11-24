@@ -114,6 +114,16 @@ docker run -d -p 9107:9107 -e HARBOR_USERNAME=admin -e HARBOR_PASSWORD=password 
 
 if you deploy Harbor to Kubernetes using the helm chart [goharbor/harbor-helm](https://github.com/goharbor/harbor-helm), you can use this file [kubernetes/harbor-exporter.yaml](kubernetes/harbor-exporter.yaml) to deploy the `harbor-exporter` with `secretKeyRef`
 
+### Deploy using Helm 
+
+Deploy harbor_exporter using helm as follows, update the values.yaml to suit your environment ensuring the namespace matches where Harbor is deployed then from within the chart directory.
+
+```bash
+ helm install harbor-exporter -f values.yaml
+```
+
+
+
 ## Using Grafana
 
 You can load this json file [grafana/harbor-overview.json](grafana/harbor-overview.json) to Grafana instance to have the dashboard. ![screenshot](grafana/screenshot.png)
