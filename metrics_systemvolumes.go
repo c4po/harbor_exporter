@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/go-kit/kit/log/level"
 	"github.com/prometheus/client_golang/prometheus"
-	"time"
 )
 
 func (h *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool {
