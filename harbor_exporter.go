@@ -50,7 +50,7 @@ const (
 	metricsGroupSystemInfo   = "systeminfo"
 )
 
-func MetricsGroup_Values() []string {
+func metricsGroupValues() []string {
 	return []string{
 		metricsGroupHealth,
 		metricsGroupScans,
@@ -136,6 +136,8 @@ func (l promHTTPLogger) Println(v ...interface{}) {
 	level.Error(l.logger).Log("msg", fmt.Sprint(v...))
 }
 
+// HarborExporter structure
+// Connection info to harbor instance
 type HarborExporter struct {
 	instance string
 	uri      string
@@ -165,7 +167,7 @@ func NewHarborExporter() *HarborExporter {
 	}
 }
 
-func getHttpClient(skipVerify bool) (*http.Client, error) {
+func getHTTPClient(skipVerify bool) (*http.Client, error) {
 	rootCAs, err := x509.SystemCertPool()
 	if err != nil {
 		return nil, err
@@ -386,6 +388,7 @@ func Status2i(s string) int8 {
 	return 0
 }
 
+// Btoi converts bool to int8
 func Btoi(b bool) int8 {
 	if b {
 		return 1
@@ -407,7 +410,7 @@ func main() {
 	kingpin.Flag("harbor.timeout", "Timeout on HTTP requests to the harbor API.").Default("500ms").DurationVar(&exporter.timeout)
 	kingpin.Flag("harbor.insecure", "Disable TLS host verification.").Default("false").BoolVar(&exporter.insecure)
 	kingpin.Flag("harbor.pagesize", "Page size on requests to the harbor API.").Envar("HARBOR_PAGESIZE").Default("100").IntVar(&exporter.pageSize)
-	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(MetricsGroup_Values()...)
+	skip := kingpin.Flag("skip.metrics", "Skip these metrics groups").Enums(metricsGroupValues()...)
 	kingpin.Flag("cache.enabled", "Enable metrics caching.").Envar("HARBOR_CACHE_ENABLED").Default("false").BoolVar(&exporter.cacheEnabled)
 	kingpin.Flag("cache.duration", "Time duration collected values are cached for.").Envar("HARBOR_CACHE_DURATION").Default("20s").DurationVar(&exporter.cacheDuration)
 
@@ -417,7 +420,7 @@ func main() {
 	kingpin.Parse()
 	logger := promlog.New(promlogConfig)
 
-	client, err := getHttpClient(exporter.insecure)
+	client, err := getHTTPClient(exporter.insecure)
 	if err != nil {
 		level.Error(logger).Log("msg", "Failed to create HTTP client")
 		os.Exit(1)
@@ -431,7 +434,7 @@ func main() {
 	level.Info(logger).Log("build_context", version.BuildContext())
 
 	collectMetricsGroup = make(map[string]bool)
-	for _, v := range MetricsGroup_Values() {
+	for _, v := range metricsGroupValues() {
 		collectMetricsGroup[v] = true
 	}
 	for _, v := range *skip {

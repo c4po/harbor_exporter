@@ -12,43 +12,43 @@ import (
 func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type projectsMetrics []struct {
-		Project_id  float64
-		Owner_id    float64
-		Name        string
-		Repo_count  float64
-		Chart_count float64
+		ProjectID  float64
+		OwnerID    float64
+		Name       string
+		RepoCount  float64
+		ChartCount float64
 	}
 	type repositoriesMetric []struct {
-		Id            float64
-		Name          string
-		Project_id    float64
-		Description   string
-		Pull_count    float64
-		Star_count    float64
-		Tags_count    float64
-		Creation_time time.Time
-		Update_time   time.Time
-		labels        []struct {
-			Id            float64
-			Name          string
-			Project_id    float64
-			Description   string
-			Color         string
-			Deleted       bool
-			Scope         string
-			Creation_time time.Time
-			Update_time   time.Time
+		ID           float64
+		Name         string
+		ProjectID    float64
+		Description  string
+		PullCount    float64
+		StarCount    float64
+		TagsCount    float64
+		CreationTime time.Time
+		UpdateTime   time.Time
+		labels       []struct {
+			ID           float64
+			Name         string
+			ProjectID    float64
+			Description  string
+			Color        string
+			Deleted      bool
+			Scope        string
+			CreationTime time.Time
+			UpdateTime   time.Time
 		}
 	}
 	type repositoriesMetricV2 []struct {
-		Id             float64
-		Name           string
-		Project_id     float64
-		Description    string
-		Pull_count     float64
-		Artifact_count float64
-		Creation_time  time.Time
-		Update_time    time.Time
+		ID            float64
+		Name          string
+		ProjectID     float64
+		Description   string
+		PullCount     float64
+		ArtifactCount float64
+		CreationTime  time.Time
+		UpdateTime    time.Time
 	}
 	var projectsData projectsMetrics
 	err := h.requestAll("/projects", func(pageBody []byte) error {
@@ -66,7 +66,7 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 	}
 
 	for i := range projectsData {
-		projectId := strconv.FormatFloat(projectsData[i].Project_id, 'f', 0, 32)
+		projectID := strconv.FormatFloat(projectsData[i].ProjectID, 'f', 0, 32)
 		if h.isV2 {
 			var data repositoriesMetricV2
 			err := h.requestAll("/projects/"+projectsData[i].Name+"/repositories", func(pageBody []byte) error {
@@ -85,21 +85,21 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			}
 
 			for i := range data {
-				repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
+				repoID := strconv.FormatFloat(data[i].ID, 'f', 0, 32)
 				ch <- prometheus.MustNewConstMetric(
-					allMetrics["repositories_pull_total"].Desc, allMetrics["repositories_pull_total"].Type, data[i].Pull_count, data[i].Name, repoId,
+					allMetrics["repositories_pull_total"].Desc, allMetrics["repositories_pull_total"].Type, data[i].PullCount, data[i].Name, repoID,
 				)
 				// ch <- prometheus.MustNewConstMetric(
 				// 	allMetrics["repositories_star_total"].Desc, allMetrics["repositories_star_total"].Type, data[i].Star_count, data[i].Name, repoId,
 				// )
 				ch <- prometheus.MustNewConstMetric(
-					allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].Artifact_count, data[i].Name, repoId,
+					allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].ArtifactCount, data[i].Name, repoID,
 				)
 			}
 
 		} else {
 			var data repositoriesMetric
-			err := h.requestAll("/repositories?project_id="+projectId, func(pageBody []byte) error {
+			err := h.requestAll("/repositories?project_id="+projectID, func(pageBody []byte) error {
 				var pageData repositoriesMetric
 				if err := json.Unmarshal(pageBody, &pageData); err != nil {
 					return err
@@ -115,15 +115,15 @@ func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) 
 			}
 
 			for i := range data {
-				repoId := strconv.FormatFloat(data[i].Id, 'f', 0, 32)
+				repoID := strconv.FormatFloat(data[i].ID, 'f', 0, 32)
 				ch <- prometheus.MustNewConstMetric(
-					allMetrics["repositories_pull_total"].Desc, allMetrics["repositories_pull_total"].Type, data[i].Pull_count, data[i].Name, repoId,
+					allMetrics["repositories_pull_total"].Desc, allMetrics["repositories_pull_total"].Type, data[i].PullCount, data[i].Name, repoID,
 				)
 				ch <- prometheus.MustNewConstMetric(
-					allMetrics["repositories_star_total"].Desc, allMetrics["repositories_star_total"].Type, data[i].Star_count, data[i].Name, repoId,
+					allMetrics["repositories_star_total"].Desc, allMetrics["repositories_star_total"].Type, data[i].StarCount, data[i].Name, repoID,
 				)
 				ch <- prometheus.MustNewConstMetric(
-					allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].Tags_count, data[i].Name, repoId,
+					allMetrics["repositories_tags_total"].Desc, allMetrics["repositories_tags_total"].Type, data[i].TagsCount, data[i].Name, repoID,
 				)
 			}
 		}

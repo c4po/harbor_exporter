@@ -2,10 +2,11 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/go-kit/kit/log/level"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
+
+	"github.com/go-kit/kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (h *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
@@ -26,9 +27,9 @@ func (h *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		return false
 	}
 
-	scan_requester, _ := strconv.ParseFloat(data.Requester, 64)
+	scanRequester, _ := strconv.ParseFloat(data.Requester, 64)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["scans_requester"].Desc, allMetrics["scans_requester"].Type, float64(scan_requester),
+		allMetrics["scans_requester"].Desc, allMetrics["scans_requester"].Type, float64(scanRequester),
 	)
 
 	ch <- prometheus.MustNewConstMetric(

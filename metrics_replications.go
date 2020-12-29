@@ -12,7 +12,7 @@ import (
 func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type policiesMetrics []struct {
-		Id      float64
+		ID      float64
 		Name    string
 		Enabled bool
 		Trigger struct {
@@ -21,11 +21,11 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 	type policyMetric []struct {
-		Status      string
-		Failed      float64
-		Succeed     float64
-		In_progress float64
-		Stopped     float64
+		Status     string
+		Failed     float64
+		Succeed    float64
+		InProgress float64
+		Stopped    float64
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 
@@ -45,20 +45,20 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 	}
 
 	for i := range policiesData {
-		if (policiesData[i].Enabled == true && policiesData[i].Trigger.Type == "scheduled") {
-			policyId := strconv.FormatFloat(policiesData[i].Id, 'f', 0, 32)
+		if policiesData[i].Enabled == true && policiesData[i].Trigger.Type == "scheduled" {
+			policyID := strconv.FormatFloat(policiesData[i].ID, 'f', 0, 32)
 			policyName := policiesData[i].Name
 
-			body, _ := h.request("/replication/executions?policy_id=" + policyId + "&page=1&page_size=2")
+			body, _ := h.request("/replication/executions?policy_id=" + policyID + "&page=1&page_size=2")
 			var data policyMetric
 
 			if err := json.Unmarshal(body, &data); err != nil {
-				level.Error(h.logger).Log("msg", "Error retrieving replication data for policy "+policyName+" (ID "+policyId+")", "err", err.Error())
+				level.Error(h.logger).Log("msg", "Error retrieving replication data for policy "+policyName+" (ID "+policyID+")", "err", err.Error())
 				return false
 			}
 
-			if (len(data) == 0) {
-				level.Debug(h.logger).Log("msg", "Policy "+policyName+" (ID "+policyId+") has no executions yet")
+			if len(data) == 0 {
+				level.Debug(h.logger).Log("msg", "Policy "+policyName+" (ID "+policyID+") has no executions yet")
 				return false
 			}
 
@@ -83,7 +83,7 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Succeed, policyName, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].In_progress, policyName, "in_progress",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].InProgress, policyName, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
 				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Stopped, policyName, "stopped",

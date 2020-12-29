@@ -2,25 +2,26 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/go-kit/kit/log/level"
-	"github.com/prometheus/client_golang/prometheus"
 	"strconv"
 	"time"
+
+	"github.com/go-kit/kit/log/level"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func (h *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
 	type quotaMetric []struct {
-		Id  float64
+		ID  float64
 		Ref struct {
-			Id         float64
-			Name       string
-			Owner_name string
+			ID        float64
+			Name      string
+			OwnerName string
 		}
-		Creation_time time.Time
-		Update_time   time.Time
-		Hard          struct {
+		CreationTime time.Time
+		UpdateTime   time.Time
+		Hard         struct {
 			Count   float64
 			Storage float64
 		}
@@ -45,10 +46,10 @@ func (h *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 	}
 
 	for i := range data {
-		if data[i].Ref.Name == "" || data[i].Ref.Id == 0 {
-			level.Debug(h.logger).Log(data[i].Ref.Id, data[i].Ref.Name)
+		if data[i].Ref.Name == "" || data[i].Ref.ID == 0 {
+			level.Debug(h.logger).Log(data[i].Ref.ID, data[i].Ref.Name)
 		} else {
-			repoid := strconv.FormatFloat(data[i].Ref.Id, 'f', 0, 32)
+			repoid := strconv.FormatFloat(data[i].Ref.ID, 'f', 0, 32)
 			ch <- prometheus.MustNewConstMetric(
 				allMetrics["quotas_count_total"].Desc, allMetrics["quotas_count_total"].Type, data[i].Hard.Count, "hard", data[i].Ref.Name, repoid,
 			)
