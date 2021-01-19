@@ -53,6 +53,12 @@ make dockerbuild
 |harbor_system_with_chartmuseum   | |
 |harbor_system_notification_enable| |                              
 |harbor_replication_latency| | |
+|harbor_artifacts_vulnerabilities|quantity of detected vulnerabilities|artifact_id, artifact_name, project_id, project_name, repo_id, repo_name, report_id, status=[fixable, total, fixable, low, medium, high]|
+|harbor_artifacts_size|size in bytes|artifact_id, artifact_name, project_id, project_name, repo_id, repo_name|
+|harbor_artifacts_vulnerabilities_scans|current status of scan process: 1 - Success, 2 - Running, 0 - other|artifact_id, artifact_name, project_id, project_name, repo_id, repo_name, status|
+|harbor_artifacts_vulnerabilities_scan_duration|time spent on the last scan|artifact_id, artifact_name, project_id, project_name, repo_id, repo_name, report_id|
+|harbor_artifacts_vulnerabilities_scan_start|the last scan start timestamp|artifact_id, artifact_name, project_id, project_name, repo_id, repo_name, report_id|
+
 
 _Note: when the harbor.instance flag is used, each metric name starts with `harbor_instancename_` instead of just `harbor_`._
 
