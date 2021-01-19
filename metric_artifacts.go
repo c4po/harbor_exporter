@@ -89,10 +89,11 @@ func (h *HarborExporter) collectArtifactsMetric(ch chan<- prometheus.Metric) boo
 
 	// Make metrics.
 	var (
-		sizeMI     = allMetrics["artifacts_size"]
-		vulnMI     = allMetrics["artifacts_vulnerabilities"]
-		scansMI    = allMetrics["artifacts_vulnerabilities_scans"]
-		scansDurMI = allMetrics["artifacts_vulnerabilities_scan_duration"]
+		sizeMI       = allMetrics["artifacts_size"]
+		vulnMI       = allMetrics["artifacts_vulnerabilities"]
+		scansMI      = allMetrics["artifacts_vulnerabilities_scans"]
+		scansDurMI   = allMetrics["artifacts_vulnerabilities_scan_duration"]
+		scansStartTS = allMetrics["artifacts_vulnerabilities_scan_start"]
 	)
 
 	for pi := range prData {
@@ -139,8 +140,8 @@ func (h *HarborExporter) collectArtifactsMetric(ch chan<- prometheus.Metric) boo
 				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.High), projectName, projectID, repoName, repoID, artName, artID, reportID, "high")
 
 				// Scan Status.
-				ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.Duration), projectName, projectID, repoName, repoID, artName, artID, reportID, "duration_sec")
-				ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.StartTime.Unix()), projectName, projectID, repoName, repoID, artName, artID, reportID, "start_time")
+				ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.Duration), projectName, projectID, repoName, repoID, artName, artID, reportID)
+				ch <- prometheus.MustNewConstMetric(scansStartTS.Desc, scansStartTS.Type, float64(scanInfo.StartTime.Unix()), projectName, projectID, repoName, repoID, artName, artID, reportID)
 
 				var scanRes float64
 

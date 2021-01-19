@@ -68,17 +68,18 @@ var (
 	allMetrics          map[string]metricInfo
 	collectMetricsGroup map[string]bool
 
-	componentLabelNames                     = []string{"component"}
-	typeLabelNames                          = []string{"type"}
-	quotaLabelNames                         = []string{"type", "repo_name", "repo_id"}
-	repoLabelNames                          = []string{"repo_name", "repo_id"}
-	artifactLabelNames                      = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
-	artifactVulnerabilitiesLabelNames       = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "status"}
-	artifactsVulnerabilitiesScansLabelNames = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
-	storageLabelNames                       = []string{"storage"}
-	replicationLabelNames                   = []string{"repl_pol_name"}
-	replicationTaskLabelNames               = []string{"repl_pol_name", "result"}
-	systemInfoLabelNames                    = []string{"auth_mode", "project_creation_restriction", "harbor_version", "registry_storage_provider_name"}
+	componentLabelNames                       = []string{"component"}
+	typeLabelNames                            = []string{"type"}
+	quotaLabelNames                           = []string{"type", "repo_name", "repo_id"}
+	repoLabelNames                            = []string{"repo_name", "repo_id"}
+	artifactLabelNames                        = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
+	artifactVulnerabilitiesLabelNames         = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "status"}
+	artifactsVulnerabilitiesScansLabelNames   = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
+	artifactVulnerabilitiesDurationLabelNames = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id"}
+	storageLabelNames                         = []string{"storage"}
+	replicationLabelNames                     = []string{"repl_pol_name"}
+	replicationTaskLabelNames                 = []string{"repl_pol_name", "result"}
+	systemInfoLabelNames                      = []string{"auth_mode", "project_creation_restriction", "harbor_version", "registry_storage_provider_name"}
 )
 
 type metricInfo struct {
@@ -123,8 +124,8 @@ func createMetrics(instanceName string) {
 	allMetrics["repositories_latency"] = newMetricInfo(instanceName, "repositories_latency", "Time in seconds to collect repository metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["artifacts_size"] = newMetricInfo(instanceName, "artifacts_size", "Size in bytes for uploaded artifacts", prometheus.GaugeValue, artifactLabelNames, nil)
 	allMetrics["artifacts_vulnerabilities"] = newMetricInfo(instanceName, "artifacts_vulnerabilities", "Detected vulnerabilities for uploaded artifacts", prometheus.GaugeValue, artifactVulnerabilitiesLabelNames, nil)
-	allMetrics["artifacts_vulnerabilities_scan_start"] = newMetricInfo(instanceName, "artifacts_vulnerabilities_scan_start", "Vulnerabilities scan start time", prometheus.GaugeValue, artifactVulnerabilitiesLabelNames, nil)
-	allMetrics["artifacts_vulnerabilities_scan_duration"] = newMetricInfo(instanceName, "artifacts_vulnerabilities_scan_duration", "Vulnerabilities scan duration", prometheus.GaugeValue, artifactVulnerabilitiesLabelNames, nil)
+	allMetrics["artifacts_vulnerabilities_scan_start"] = newMetricInfo(instanceName, "artifacts_vulnerabilities_scan_start", "Vulnerabilities scan start time", prometheus.GaugeValue, artifactVulnerabilitiesDurationLabelNames, nil)
+	allMetrics["artifacts_vulnerabilities_scan_duration"] = newMetricInfo(instanceName, "artifacts_vulnerabilities_scan_duration", "Vulnerabilities scan duration", prometheus.GaugeValue, artifactVulnerabilitiesDurationLabelNames, nil)
 	allMetrics["artifacts_vulnerabilities_scans"] = newMetricInfo(instanceName, "artifacts_vulnerabilities_scans", "Vulnerabilities scan operation status. Success == 1, running == 2; others == 0", prometheus.CounterValue, artifactsVulnerabilitiesScansLabelNames, nil)
 	allMetrics["artifacts_latency"] = newMetricInfo(instanceName, "artifacts_latency", "Time in seconds to collect artifacts metrics", prometheus.GaugeValue, nil, nil)
 	allMetrics["replication_status"] = newMetricInfo(instanceName, "replication_status", "Get status of the last execution of this replication policy: Succeed = 1, any other status = 0.", prometheus.GaugeValue, replicationLabelNames, nil)
