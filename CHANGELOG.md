@@ -1,3 +1,9 @@
+## [v0.6.0]
+
+FEATURES:
+
+- [#74](https://github.com/c4po/harbor_exporter/pull/74): Added artifacts metrics
+
 ## [v0.5.9]
 
 FIX BUG:
