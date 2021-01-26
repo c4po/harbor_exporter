@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -38,9 +39,10 @@ type scanOverview struct {
 	Summary    struct {
 		Fixable int `json:"fixable"`
 		Summary struct {
-			High   int `json:"High"`
-			Low    int `json:"Low"`
-			Medium int `json:"Medium"`
+			Critical int `json:"Critical"`
+			High     int `json:"High"`
+			Medium   int `json:"Medium"`
+			Low      int `json:"Low"`
 		} `json:"summary"`
 		Total int `json:"total"`
 	} `json:"summary"`
@@ -138,6 +140,7 @@ func (h *HarborExporter) collectArtifactsMetric(ch chan<- prometheus.Metric) boo
 				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Low), projectName, projectID, repoName, repoID, artName, artID, reportID, "low")
 				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Medium), projectName, projectID, repoName, repoID, artName, artID, reportID, "medium")
 				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.High), projectName, projectID, repoName, repoID, artName, artID, reportID, "high")
+				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Critical), projectName, projectID, repoName, repoID, artName, artID, reportID, "critical")
 
 				// Scan Status.
 				ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.Duration), projectName, projectID, repoName, repoID, artName, artID, reportID)
@@ -249,7 +252,7 @@ func (h *HarborExporter) loadArtifacts(projectName string, repoData repositories
 		var reqURL string
 		if h.isV2 {
 			reqURL = "/projects/" + projectName +
-				"/repositories" + strings.TrimLeft(repoData[i].Name, projectName) +
+				"/repositories/" + url.PathEscape(strings.TrimLeft(repoData[i].Name, projectName+"/")) +
 				"/artifacts?with_tag=true&with_scan_overview=true"
 		} else {
 			panic("No v1 API support")
