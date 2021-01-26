@@ -1,3 +1,9 @@
+## [v0.6.1]
+
+FIX BUG:
+
+- [#75](https://github.com/c4po/harbor_exporter/issues/75): Fix artifacts collector
+
 ## [v0.6.0]
 
 FEATURES:
