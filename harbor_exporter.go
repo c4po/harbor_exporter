@@ -72,10 +72,10 @@ var (
 	typeLabelNames                            = []string{"type"}
 	quotaLabelNames                           = []string{"type", "repo_name", "repo_id"}
 	repoLabelNames                            = []string{"repo_name", "repo_id"}
-	artifactLabelNames                        = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
-	artifactVulnerabilitiesLabelNames         = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "status"}
-	artifactsVulnerabilitiesScansLabelNames   = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id"}
-	artifactVulnerabilitiesDurationLabelNames = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id"}
+	artifactLabelNames                        = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "tag"}
+	artifactVulnerabilitiesLabelNames         = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "status", "tag"}
+	artifactsVulnerabilitiesScansLabelNames   = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "tag"}
+	artifactVulnerabilitiesDurationLabelNames = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "tag"}
 	storageLabelNames                         = []string{"storage"}
 	replicationLabelNames                     = []string{"repl_pol_name"}
 	replicationTaskLabelNames                 = []string{"repl_pol_name", "result"}

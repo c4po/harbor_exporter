@@ -121,41 +121,47 @@ func (h *HarborExporter) collectArtifactsMetric(ch chan<- prometheus.Metric) boo
 					artID   = strconv.FormatInt(ap.ID, 10)
 					artName = ap.Digest
 				)
+				for ti := range ap.Tags {
+					var (
+						tag     = &ap.Tags[ti]
+						tagName = tag.Name
+					)
 
-				// Size.
-				ch <- prometheus.MustNewConstMetric(sizeMI.Desc, sizeMI.Type, float64(ap.Size), projectName, projectID, repoName, repoID, artName, artID)
+					// Size.
+					ch <- prometheus.MustNewConstMetric(sizeMI.Desc, sizeMI.Type, float64(ap.Size), projectName, projectID, repoName, repoID, artName, artID, tagName)
 
-				// Vulnerabilities.
-				var scanInfo = &ap.ScanOverview
+					// Vulnerabilities.
+					var scanInfo = &ap.ScanOverview
 
-				// No scan performed.
-				var reportID = scanInfo.ReportID
+					// No scan performed.
+					var reportID = scanInfo.ReportID
 
-				if reportID == "" {
-					continue
+					if reportID == "" {
+						continue
+					}
+
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Fixable), projectName, projectID, repoName, repoID, artName, artID, reportID, "fixable", tagName)
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Total), projectName, projectID, repoName, repoID, artName, artID, reportID, "total", tagName)
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Low), projectName, projectID, repoName, repoID, artName, artID, reportID, "low", tagName)
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Medium), projectName, projectID, repoName, repoID, artName, artID, reportID, "medium", tagName)
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.High), projectName, projectID, repoName, repoID, artName, artID, reportID, "high", tagName)
+					ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Critical), projectName, projectID, repoName, repoID, artName, artID, reportID, "critical", tagName)
+
+					// Scan Status.
+					ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.Duration), projectName, projectID, repoName, repoID, artName, artID, reportID, tagName)
+					ch <- prometheus.MustNewConstMetric(scansStartTS.Desc, scansStartTS.Type, float64(scanInfo.StartTime.Unix()), projectName, projectID, repoName, repoID, artName, artID, reportID, tagName)
+
+					var scanRes float64
+
+					switch strings.ToLower(scanInfo.ScanStatus) {
+					case "success":
+						scanRes = 1
+					case "running":
+						scanRes = 2
+					}
+
+					ch <- prometheus.MustNewConstMetric(scansMI.Desc, scansMI.Type, scanRes, projectName, projectID, repoName, repoID, artName, artID, tagName)
 				}
-
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Fixable), projectName, projectID, repoName, repoID, artName, artID, reportID, "fixable")
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Total), projectName, projectID, repoName, repoID, artName, artID, reportID, "total")
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Low), projectName, projectID, repoName, repoID, artName, artID, reportID, "low")
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Medium), projectName, projectID, repoName, repoID, artName, artID, reportID, "medium")
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.High), projectName, projectID, repoName, repoID, artName, artID, reportID, "high")
-				ch <- prometheus.MustNewConstMetric(vulnMI.Desc, vulnMI.Type, float64(scanInfo.Summary.Summary.Critical), projectName, projectID, repoName, repoID, artName, artID, reportID, "critical")
-
-				// Scan Status.
-				ch <- prometheus.MustNewConstMetric(scansDurMI.Desc, scansDurMI.Type, float64(scanInfo.Duration), projectName, projectID, repoName, repoID, artName, artID, reportID)
-				ch <- prometheus.MustNewConstMetric(scansStartTS.Desc, scansStartTS.Type, float64(scanInfo.StartTime.Unix()), projectName, projectID, repoName, repoID, artName, artID, reportID)
-
-				var scanRes float64
-
-				switch strings.ToLower(scanInfo.ScanStatus) {
-				case "success":
-					scanRes = 1
-				case "running":
-					scanRes = 2
-				}
-
-				ch <- prometheus.MustNewConstMetric(scansMI.Desc, scansMI.Type, scanRes, projectName, projectID, repoName, repoID, artName, artID)
 			}
 		}
 	}
