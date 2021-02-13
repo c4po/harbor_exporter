@@ -1,3 +1,9 @@
+## [v0.6.2]
+
+FEATURES:
+
+- [#77](https://github.com/c4po/harbor_exporter/issues/77): include the tag name in the artifacts_* metrics
+
 ## [v0.6.1]
 
 FIX BUG:
