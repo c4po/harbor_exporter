@@ -45,7 +45,7 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 	}
 
 	for i := range policiesData {
-		if policiesData[i].Enabled == true && policiesData[i].Trigger.Type == "scheduled" {
+		if policiesData[i].Enabled == true {
 			policyID := strconv.FormatFloat(policiesData[i].ID, 'f', 0, 32)
 			policyName := policiesData[i].Name
 
@@ -59,11 +59,11 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 
 			if len(data) == 0 {
 				level.Debug(h.logger).Log("msg", "Policy "+policyName+" (ID "+policyID+") has no executions yet")
-				return false
+				continue
 			}
 
 			var j int = 0
-			if data[j].Status == "InProgress" && len(data) > 1 {
+			if len(data) > 1 && data[j].Status == "InProgress" {
 				// Current is in progress: check previous replication execution
 				j = 1
 			}
