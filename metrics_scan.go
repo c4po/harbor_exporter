@@ -12,16 +12,16 @@ import (
 func (h *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
-       type scanMetric struct {
-  	        Total     float64 `json:"total"`
-                Completed float64 `json:"completed"`
-                Metrics   struct {
-                  Error   float64 `json:"Error"`
-                  Success float64 `json:"Success"`
-                } `json:"metrics"`
-                Requester string `json:"requester"`
-                Ongoing   bool   `json:"ongoing"`
-        }
+	type scanMetric struct {
+		Total     float64 `json:"total"`
+		Completed float64 `json:"completed"`
+		Metrics   struct {
+		  Error   float64 `json:"Error"`
+		  Success float64 `json:"Success"`
+		} `json:"metrics"`
+		Requester string `json:"requester"`
+		Ongoing   bool   `json:"ongoing"`
+	}
        
 
 	body, _ := h.request("/scans/all/metrics")
@@ -41,13 +41,13 @@ func (h *HarborExporter) collectScanMetric(ch chan<- prometheus.Metric) bool {
 		allMetrics["scans_total"].Desc, allMetrics["scans_total"].Type, float64(data.Total),
 	)
 
-        ch <- prometheus.MustNewConstMetric(
-                allMetrics["scans_error"].Desc, allMetrics["scans_error"].Type, float64(data.Metrics.Error),
-        )
+	ch <- prometheus.MustNewConstMetric(
+		allMetrics["scans_error"].Desc, allMetrics["scans_error"].Type, float64(data.Metrics.Error),
+	)
 
-        ch <- prometheus.MustNewConstMetric(
-                allMetrics["scans_success"].Desc, allMetrics["scans_success"].Type, float64(data.Metrics.Success),
-        )
+	ch <- prometheus.MustNewConstMetric(
+		allMetrics["scans_success"].Desc, allMetrics["scans_success"].Type, float64(data.Metrics.Success),
+	)
 
 
 	ch <- prometheus.MustNewConstMetric(
