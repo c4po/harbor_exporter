@@ -48,6 +48,7 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 		if policiesData[i].Enabled == true {
 			policyID := strconv.FormatFloat(policiesData[i].ID, 'f', 0, 32)
 			policyName := policiesData[i].Name
+			triggerType := policiesData[i].Trigger.Type
 
 			body, _ := h.request("/replication/executions?policy_id=" + policyID + "&page=1&page_size=2")
 			var data policyMetric
@@ -74,19 +75,19 @@ func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) 
 				replStatus = 1
 			}
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName,
+				allMetrics["replication_status"].Desc, allMetrics["replication_status"].Type, replStatus, policyName, triggerType,
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Failed, policyName, "failed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Failed, policyName, triggerType, "failed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Succeed, policyName, "succeed",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Succeed, policyName, triggerType, "succeed",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].InProgress, policyName, "in_progress",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].InProgress, policyName, triggerType, "in_progress",
 			)
 			ch <- prometheus.MustNewConstMetric(
-				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Stopped, policyName, "stopped",
+				allMetrics["replication_tasks"].Desc, allMetrics["replication_tasks"].Type, data[j].Stopped, policyName, triggerType, "stopped",
 			)
 		}
 	}

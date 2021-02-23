@@ -77,8 +77,8 @@ var (
 	artifactsVulnerabilitiesScansLabelNames   = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "tag"}
 	artifactVulnerabilitiesDurationLabelNames = []string{"project_name", "project_id", "repo_name", "repo_id", "artifact_name", "artifact_id", "report_id", "tag"}
 	storageLabelNames                         = []string{"storage"}
-	replicationLabelNames                     = []string{"repl_pol_name"}
-	replicationTaskLabelNames                 = []string{"repl_pol_name", "result"}
+	replicationLabelNames                     = []string{"repl_pol_name", "repl_trigger_type"}
+	replicationTaskLabelNames                 = []string{"repl_pol_name", "repl_trigger_type", "result"}
 	systemInfoLabelNames                      = []string{"auth_mode", "project_creation_restriction", "harbor_version", "registry_storage_provider_name"}
 )
 
