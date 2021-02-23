@@ -29,6 +29,8 @@ make dockerbuild
 |harbor_health_latency| | |
 |harbor_scans_completed | | |
 |harbor_scans_total | | |
+|harbor_scans_success | | |
+|harbor_scans_error | | |
 |harbor_scans_requester | | |
 |harbor_scans_latency| | |
 |harbor_project_count_total| |type=[private_project, public_project, total_project]|
