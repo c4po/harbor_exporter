@@ -258,7 +258,7 @@ func (h *HarborExporter) loadArtifacts(projectName string, repoData repositories
 		var reqURL string
 		if h.isV2 {
 			reqURL = "/projects/" + projectName +
-				"/repositories/" + url.PathEscape(strings.TrimLeft(repoData[i].Name, projectName+"/")) +
+				"/repositories/" + url.PathEscape(strings.TrimPrefix(repoData[i].Name, projectName+"/")) +
 				"/artifacts?with_tag=true&with_scan_overview=true"
 		} else {
 			panic("No v1 API support")
