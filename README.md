@@ -43,8 +43,8 @@ make dockerbuild
 |harbor_repositories_star_total| |repo_id, repo_name|
 |harbor_repositories_tags_total| |repo_id, repo_name|
 |harbor_repositories_latency| | |
-|harbor_replication_status|status of the last execution of this replication policy: Succeed = 1, any other status = 0|repl_pol_name|
-|harbor_replication_tasks|number of replication tasks, with various results, in the latest execution of this replication policy|repl_pol_name, result=[failed, succeed, in_progress, stopped]|
+|harbor_replication_status|status of the last execution of this replication policy: Succeed = 1, any other status = 0|repl_pol_name, repl_trigger_type[manual, scheduled, event_based]|
+|harbor_replication_tasks|number of replication tasks, with various results, in the latest execution of this replication policy|repl_pol_name, repl_trigger_type[manual, scheduled, event_based], result=[failed, succeed, in_progress, stopped]|
 |harbor_system_info               | |auth_mode, project_creation_restriction, harbor_version, registry_storage_provider_name
 |harbor_system_with_notary        | |
 |harbor_system_self_registration  | |
