@@ -1,3 +1,10 @@
+## [v0.6.3]
+
+FIX BUG:
+
+- [#82](https://github.com/c4po/harbor_exporter/issues/82): Missing replication metrics
+- [#84](https://github.com/c4po/harbor_exporter/issues/84): Fix trimming of artifact name
+
 ## [v0.6.2]
 
 FEATURES:
