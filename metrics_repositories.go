@@ -12,43 +12,43 @@ import (
 func (h *HarborExporter) collectRepositoriesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type projectsMetrics []struct {
-		ProjectID  float64
-		OwnerID    float64
-		Name       string
-		RepoCount  float64
-		ChartCount float64
+		ProjectID  float64 `json:"project_id"`
+		OwnerID    float64 `json:"owner_id"`
+		Name       string  `json:"name"`
+		RepoCount  float64 `json:"repo_count"`
+		ChartCount float64 `json:"chart_count"`
 	}
 	type repositoriesMetric []struct {
-		ID           float64
-		Name         string
-		ProjectID    float64
-		Description  string
-		PullCount    float64
-		StarCount    float64
-		TagsCount    float64
-		CreationTime time.Time
-		UpdateTime   time.Time
+		ID           float64   `json:"id"`
+		Name         string    `json:"name"`
+		ProjectID    float64   `json:"project_id"`
+		Description  string    `json:"description"`
+		PullCount    float64   `json:"pull_count"`
+		StarCount    float64   `json:"star_count"`
+		TagsCount    float64   `json:"tags_count"`
+		CreationTime time.Time `json:"creation_time"`
+		UpdateTime   time.Time `json:"update_time"`
 		labels       []struct {
-			ID           float64
-			Name         string
-			ProjectID    float64
-			Description  string
-			Color        string
-			Deleted      bool
-			Scope        string
-			CreationTime time.Time
-			UpdateTime   time.Time
+			ID           float64   `json:"id"`
+			Name         string    `json:"name"`
+			ProjectID    float64   `json:"project_id"`
+			Description  string    `json:"description"`
+			Color        string    `json:"color"`
+			Deleted      bool      `json:"deleted"`
+			Scope        string    `json:"scope"`
+			CreationTime time.Time `json:"creation_time"`
+			UpdateTime   time.Time `json:"update_time"`
 		}
 	}
 	type repositoriesMetricV2 []struct {
-		ID            float64
-		Name          string
-		ProjectID     float64
-		Description   string
-		PullCount     float64
-		ArtifactCount float64
-		CreationTime  time.Time
-		UpdateTime    time.Time
+		ID            float64   `json:"id"`
+		Name          string    `json:"name"`
+		ProjectID     float64   `json:"project_id"`
+		Description   string    `json:"description"`
+		PullCount     float64   `json:"pull_count"`
+		ArtifactCount float64   `json:"artifact_count"`
+		CreationTime  time.Time `json:"creation_time"`
+		UpdateTime    time.Time `json:"update_time"`
 	}
 	var projectsData projectsMetrics
 	err := h.requestAll("/projects", func(pageBody []byte) error {

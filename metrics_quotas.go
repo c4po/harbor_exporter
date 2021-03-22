@@ -13,21 +13,21 @@ func (h *HarborExporter) collectQuotasMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 
 	type quotaMetric []struct {
-		ID  float64
+		ID  float64 `json:"id"`
 		Ref struct {
-			ID        float64
-			Name      string
-			OwnerName string
+			ID        float64 `json:"id"`
+			Name      string  `json:"name"`
+			OwnerName string  `json:"owner_name"`
 		}
 		CreationTime time.Time
 		UpdateTime   time.Time
 		Hard         struct {
-			Count   float64
-			Storage float64
+			Count   float64 `json:"count"`
+			Storage float64 `json:"storage"`
 		}
 		Used struct {
-			Count   float64
-			Storage float64
+			Count   float64 `json:"count"`
+			Storage float64 `json:"storage"`
 		}
 	}
 	var data quotaMetric
