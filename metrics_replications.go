@@ -12,20 +12,20 @@ import (
 func (h *HarborExporter) collectReplicationsMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type policiesMetrics []struct {
-		ID      float64
-		Name    string
-		Enabled bool
+		ID      float64 `json:"id"`
+		Name    string  `json:"name"`
+		Enabled bool    `json:"enabled"`
 		Trigger struct {
-			Type string
+			Type string `json:"type"`
 		}
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 	type policyMetric []struct {
-		Status     string
-		Failed     float64
-		Succeed    float64
-		InProgress float64
-		Stopped    float64
+		Status     string  `json:"status"`
+		Failed     float64 `json:"failed"`
+		Succeed    float64 `json:"succeed"`
+		InProgress float64 `json:"in_progress"`
+		Stopped    float64 `json:"stopped"`
 		// Extra fields omitted for maintainability: not relevant for current metrics
 	}
 

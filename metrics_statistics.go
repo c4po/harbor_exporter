@@ -12,12 +12,12 @@ func (h *HarborExporter) collectStatisticsMetric(ch chan<- prometheus.Metric) bo
 	start := time.Now()
 
 	type statisticsMetric struct {
-		TotalProjectCount   float64
-		PublicProjectCount  float64
-		PrivateProjectCount float64
-		PublicRepoCount     float64
-		TotalRepoCount      float64
-		PrivateRepoCount    float64
+		TotalProjectCount   float64 `json:"total_project_count"`
+		PublicProjectCount  float64 `json:"public_project_count"`
+		PrivateProjectCount float64 `json:"private_project_count"`
+		PublicRepoCount     float64 `json:"public_repo_count"`
+		TotalRepoCount      float64 `json:"total_repo_count"`
+		PrivateRepoCount    float64 `json:"private_repo_count"`
 	}
 
 	body, _ := h.request("/statistics")
