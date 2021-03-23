@@ -1,3 +1,10 @@
+## [v0.6.4]
+
+FIX BUG:
+
+- [#86](https://github.com/c4po/harbor_exporter/issues/86): 404 error for repository with slash in name
+- [#78](https://github.com/c4po/harbor_exporter/issues/78): Repositories and statitics metrics got zero values
+
 ## [v0.6.3]
 
 FIX BUG:
