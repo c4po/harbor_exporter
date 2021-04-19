@@ -72,7 +72,7 @@ _Note: when the harbor.instance flag is used, each metric name starts with `harb
 
 `skip.metrics` - Skip collection of certain metric groups (optional)
 
-* valid value: `scans|statistics|quotas|repositories|replication|health`
+* valid value: `artifacts|scans|statistics|quotas|repositories|replication|health`
 * default value: empty
 * example:
 ```
