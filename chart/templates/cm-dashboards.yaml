@@ -1,0 +1,310 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  labels:
+    grafana_dashboard: "1"
+  name: harbor-overview
+  namespace: kube-system
+data:
+  harbor-overview.json: |-
+{{`
+    {
+      "__requires": [
+        {
+          "type": "panel",
+          "id": "gauge",
+          "name": "Gauge",
+          "version": ""
+        },
+        {
+          "type": "grafana",
+          "id": "grafana",
+          "name": "Grafana",
+          "version": "6.4.2"
+        },
+        {
+          "type": "datasource",
+          "id": "prometheus",
+          "name": "Prometheus",
+          "version": "1.0.0"
+        },
+        {
+          "type": "panel",
+          "id": "table",
+          "name": "Table",
+          "version": ""
+        }
+      ],
+      "annotations": {
+        "list": [
+          {
+            "builtIn": 1,
+            "datasource": "-- Grafana --",
+            "enable": true,
+            "hide": true,
+            "iconColor": "rgba(0, 211, 255, 1)",
+            "name": "Annotations & Alerts",
+            "type": "dashboard"
+          }
+        ]
+      },
+      "editable": true,
+      "gnetId": null,
+      "graphTooltip": 0,
+      "id": null,
+      "links": [],
+      "panels": [
+        {
+          "columns": [],
+          "datasource": "Prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 12,
+            "w": 10,
+            "x": 0,
+            "y": 0
+          },
+          "id": 2,
+          "options": {},
+          "pageSize": 20,
+          "showHeader": true,
+          "sort": {
+            "col": 2,
+            "desc": true
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Tags",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "Pull",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #B",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "star",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #C",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            },
+            {
+              "alias": "Repo Name",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "repo_name",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 2,
+              "pattern": "/.*/",
+              "thresholds": [],
+              "type": "number",
+              "unit": "short"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(harbor_repositories_tags_total) by (repo_name) ",
+              "format": "table",
+              "instant": true,
+              "refId": "A"
+            },
+            {
+              "expr": "sum(harbor_repositories_pull_total) by (repo_name) ",
+              "format": "table",
+              "instant": true,
+              "refId": "B"
+            },
+            {
+              "expr": "sum(harbor_repositories_star_total) by (repo_name) ",
+              "format": "table",
+              "instant": true,
+              "refId": "C"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Repositories",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 10,
+            "y": 0
+          },
+          "id": 4,
+          "options": {
+            "fieldOptions": {
+              "calcs": [
+                "last"
+              ],
+              "defaults": {
+                "mappings": [],
+                "max": 100000000000,
+                "min": 0,
+                "thresholds": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ],
+                "unit": "decbytes"
+              },
+              "override": {},
+              "values": false
+            },
+            "orientation": "horizontal",
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "pluginVersion": "6.4.2",
+          "targets": [
+            {
+              "expr": "sum (harbor_quotas_size_bytes{type=\"used\"}) by (repo_name)",
+              "legendFormat": "{{repo_name}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Storage",
+          "type": "gauge"
+        },
+        {
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 6,
+            "w": 12,
+            "x": 10,
+            "y": 6
+          },
+          "id": 6,
+          "options": {
+            "fieldOptions": {
+              "calcs": [
+                "last"
+              ],
+              "defaults": {
+                "mappings": [],
+                "max": 1000,
+                "min": 0,
+                "thresholds": [
+                  {
+                    "color": "green",
+                    "value": null
+                  }
+                ],
+                "title": "",
+                "unit": "none"
+              },
+              "override": {},
+              "values": false
+            },
+            "orientation": "auto",
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "pluginVersion": "6.4.2",
+          "targets": [
+            {
+              "expr": "sum (harbor_quotas_count_total{type=\"used\"}) by (repo_name)",
+              "legendFormat": "{{repo_name}}",
+              "refId": "A"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "repo count",
+          "type": "gauge"
+        }
+      ],
+      "schemaVersion": 20,
+      "style": "dark",
+      "tags": [],
+      "templating": {
+        "list": []
+      },
+      "time": {
+        "from": "now-6h",
+        "to": "now"
+      },
+      "timepicker": {
+        "refresh_intervals": [
+          "5s",
+          "10s",
+          "30s",
+          "1m",
+          "5m",
+          "15m",
+          "30m",
+          "1h",
+          "2h",
+          "1d"
+        ]
+      },
+      "timezone": "",
+      "title": "Harbor Overview",
+      "uid": "Chkv50UWk",
+      "version": 6
+    }
+`}}

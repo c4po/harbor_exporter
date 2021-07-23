@@ -1,0 +1,15 @@
+apiVersion: v1
+name: harbor-exporter
+version: 1.0.0
+appVersion: 0.6.4
+description: Prometheus exporter for Harbor
+keywords:
+- harbor
+home: https://goharbor.io
+icon: https://raw.githubusercontent.com/goharbor/website/master/static/img/logos/harbor-icon-color.png
+sources:
+- https://github.com/c4po/harbor_exporter
+maintainers:
+- name: Bharat Kunwar
+  email: brtknr@bath.edu
+engine: gotpl
