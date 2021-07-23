@@ -9,32 +9,6 @@ data:
   harbor-overview.json: |-
 {{`
     {
-      "__requires": [
-        {
-          "type": "panel",
-          "id": "gauge",
-          "name": "Gauge",
-          "version": ""
-        },
-        {
-          "type": "grafana",
-          "id": "grafana",
-          "name": "Grafana",
-          "version": "6.4.2"
-        },
-        {
-          "type": "datasource",
-          "id": "prometheus",
-          "name": "Prometheus",
-          "version": "1.0.0"
-        },
-        {
-          "type": "panel",
-          "id": "table",
-          "name": "Table",
-          "version": ""
-        }
-      ],
       "annotations": {
         "list": [
           {
@@ -55,32 +29,385 @@ data:
       "links": [],
       "panels": [
         {
+          "datasource": "Prometheus",
+          "gridPos": {
+            "h": 8,
+            "w": 9,
+            "x": 0,
+            "y": 0
+          },
+          "id": 9,
+          "options": {
+            "fieldOptions": {
+              "calcs": [
+                "max"
+              ],
+              "defaults": {
+                "links": [
+                  {
+                    "title": "",
+                    "url": ""
+                  }
+                ],
+                "mappings": [],
+                "thresholds": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    }
+                  ]
+                }
+              },
+              "overrides": [],
+              "values": false
+            },
+            "orientation": "auto",
+            "showThresholdLabels": false,
+            "showThresholdMarkers": true
+          },
+          "pluginVersion": "6.6.2",
+          "targets": [
+            {
+              "expr": "sum(count(harbor_artifacts_vulnerabilities{status=~\"critical\",project_name=~\"$project_name\"}>0) by (project_name,repo_name,status)) by (project_name)",
+              "format": "time_series",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "Critical tags in {{project_name}}",
+              "refId": "D"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Tags with Critical Vulnerabilities",
+          "type": "gauge"
+        },
+        {
           "columns": [],
           "datasource": "Prometheus",
           "fontSize": "100%",
           "gridPos": {
-            "h": 12,
-            "w": 10,
-            "x": 0,
+            "h": 8,
+            "w": 14,
+            "x": 9,
             "y": 0
+          },
+          "id": 7,
+          "links": [
+            {
+              "targetBlank": true,
+              "title": "",
+              "url": "h"
+            }
+          ],
+          "options": {},
+          "pageSize": 20,
+          "showHeader": true,
+          "sort": {
+            "col": null,
+            "desc": false
+          },
+          "styles": [
+            {
+              "alias": "Time",
+              "align": "auto",
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "pattern": "Time",
+              "type": "hidden"
+            },
+            {
+              "alias": "Repo Name",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "repo_name",
+              "thresholds": [],
+              "type": "string",
+              "unit": "short"
+            },
+            {
+              "alias": "Critical",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "decimals": 0,
+              "pattern": "Value #D",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "High",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #E",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "Medium",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #F",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "Low",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #G",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "Fixable",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 0,
+              "mappingType": 1,
+              "pattern": "Value #H",
+              "thresholds": [],
+              "type": "number",
+              "unit": "none"
+            },
+            {
+              "alias": "Size",
+              "align": "auto",
+              "colorMode": null,
+              "colors": [
+                "rgba(245, 54, 54, 0.9)",
+                "rgba(237, 129, 40, 0.89)",
+                "rgba(50, 172, 45, 0.97)"
+              ],
+              "dateFormat": "YYYY-MM-DD HH:mm:ss",
+              "decimals": 2,
+              "mappingType": 1,
+              "pattern": "Value #A",
+              "thresholds": [],
+              "type": "number",
+              "unit": "bytes"
+            }
+          ],
+          "targets": [
+            {
+              "expr": "sum(harbor_artifacts_size{repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "A"
+            },
+            {
+              "expr": "sum(harbor_artifacts_vulnerabilities{status=\"critical\",repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "D"
+            },
+            {
+              "expr": "sum(harbor_artifacts_vulnerabilities{status=\"high\",repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "E"
+            },
+            {
+              "expr": "sum(harbor_artifacts_vulnerabilities{status=\"medium\",repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "F"
+            },
+            {
+              "expr": "sum(harbor_artifacts_vulnerabilities{status=\"low\",repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "G"
+            },
+            {
+              "expr": "sum(harbor_artifacts_vulnerabilities{status=\"fixable\",repo_name=~\"$repo_name\",project_name=~\"$project_name\"}) by (repo_name, tag)",
+              "format": "table",
+              "hide": false,
+              "instant": true,
+              "legendFormat": "",
+              "refId": "H"
+            }
+          ],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Vulnerabilities",
+          "transform": "table",
+          "type": "table"
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "Prometheus",
+          "fill": 1,
+          "fillGradient": 0,
+          "gridPos": {
+            "h": 8,
+            "w": 9,
+            "x": 0,
+            "y": 8
+          },
+          "hiddenSeries": false,
+          "id": 4,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": false,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 1,
+          "nullPointMode": "null",
+          "options": {
+            "dataLinks": []
+          },
+          "percentage": false,
+          "pluginVersion": "6.6.2",
+          "pointradius": 2,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "expr": "sum (harbor_quotas_size_bytes{type=\"used\",repo_name=~\"$project_name\"}) by (repo_name)",
+              "legendFormat": "{{repo_name}}",
+              "refId": "A"
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeRegions": [],
+          "timeShift": null,
+          "title": "Storage",
+          "tooltip": {
+            "shared": true,
+            "sort": 0,
+            "value_type": "individual"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "bits",
+              "label": null,
+              "logBase": 10,
+              "max": null,
+              "min": null,
+              "show": true
+            },
+            {
+              "format": "decmbytes",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": false
+            }
+          ],
+          "yaxis": {
+            "align": false,
+            "alignLevel": null
+          }
+        },
+        {
+          "columns": [],
+          "datasource": "Prometheus",
+          "fontSize": "100%",
+          "gridPos": {
+            "h": 8,
+            "w": 14,
+            "x": 9,
+            "y": 8
           },
           "id": 2,
           "options": {},
           "pageSize": 20,
           "showHeader": true,
           "sort": {
-            "col": 2,
+            "col": 3,
             "desc": true
           },
           "styles": [
             {
               "alias": "Time",
+              "align": "auto",
               "dateFormat": "YYYY-MM-DD HH:mm:ss",
               "pattern": "Time",
               "type": "hidden"
             },
             {
               "alias": "Tags",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -97,6 +424,7 @@ data:
             },
             {
               "alias": "Pull",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -112,7 +440,8 @@ data:
               "unit": "short"
             },
             {
-              "alias": "star",
+              "alias": "Star",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -129,6 +458,7 @@ data:
             },
             {
               "alias": "Repo Name",
+              "align": "auto",
               "colorMode": null,
               "colors": [
                 "rgba(245, 54, 54, 0.9)",
@@ -142,40 +472,21 @@ data:
               "thresholds": [],
               "type": "string",
               "unit": "short"
-            },
-            {
-              "alias": "",
-              "colorMode": null,
-              "colors": [
-                "rgba(245, 54, 54, 0.9)",
-                "rgba(237, 129, 40, 0.89)",
-                "rgba(50, 172, 45, 0.97)"
-              ],
-              "decimals": 2,
-              "pattern": "/.*/",
-              "thresholds": [],
-              "type": "number",
-              "unit": "short"
             }
           ],
           "targets": [
             {
-              "expr": "sum(harbor_repositories_tags_total) by (repo_name) ",
+              "expr": "sum(harbor_repositories_tags_total{repo_name=~\"$repo_name\",repo_name=~\"($project_name).*\"}) by (repo_name) ",
               "format": "table",
               "instant": true,
               "refId": "A"
             },
             {
-              "expr": "sum(harbor_repositories_pull_total) by (repo_name) ",
+              "expr": "sum(harbor_repositories_pull_total{repo_name=~\"$repo_name\",repo_name=~\"($project_name).*\"}) by (repo_name)",
               "format": "table",
+              "hide": false,
               "instant": true,
               "refId": "B"
-            },
-            {
-              "expr": "sum(harbor_repositories_star_total) by (repo_name) ",
-              "format": "table",
-              "instant": true,
-              "refId": "C"
             }
           ],
           "timeFrom": null,
@@ -183,109 +494,83 @@ data:
           "title": "Repositories",
           "transform": "table",
           "type": "table"
-        },
-        {
-          "datasource": "Prometheus",
-          "gridPos": {
-            "h": 6,
-            "w": 12,
-            "x": 10,
-            "y": 0
-          },
-          "id": 4,
-          "options": {
-            "fieldOptions": {
-              "calcs": [
-                "last"
-              ],
-              "defaults": {
-                "mappings": [],
-                "max": 100000000000,
-                "min": 0,
-                "thresholds": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ],
-                "unit": "decbytes"
-              },
-              "override": {},
-              "values": false
-            },
-            "orientation": "horizontal",
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
-          },
-          "pluginVersion": "6.4.2",
-          "targets": [
-            {
-              "expr": "sum (harbor_quotas_size_bytes{type=\"used\"}) by (repo_name)",
-              "legendFormat": "{{repo_name}}",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "Storage",
-          "type": "gauge"
-        },
-        {
-          "datasource": "Prometheus",
-          "gridPos": {
-            "h": 6,
-            "w": 12,
-            "x": 10,
-            "y": 6
-          },
-          "id": 6,
-          "options": {
-            "fieldOptions": {
-              "calcs": [
-                "last"
-              ],
-              "defaults": {
-                "mappings": [],
-                "max": 1000,
-                "min": 0,
-                "thresholds": [
-                  {
-                    "color": "green",
-                    "value": null
-                  }
-                ],
-                "title": "",
-                "unit": "none"
-              },
-              "override": {},
-              "values": false
-            },
-            "orientation": "auto",
-            "showThresholdLabels": false,
-            "showThresholdMarkers": true
-          },
-          "pluginVersion": "6.4.2",
-          "targets": [
-            {
-              "expr": "sum (harbor_quotas_count_total{type=\"used\"}) by (repo_name)",
-              "legendFormat": "{{repo_name}}",
-              "refId": "A"
-            }
-          ],
-          "timeFrom": null,
-          "timeShift": null,
-          "title": "repo count",
-          "type": "gauge"
         }
       ],
-      "schemaVersion": 20,
+      "schemaVersion": 22,
       "style": "dark",
       "tags": [],
       "templating": {
-        "list": []
+        "list": [
+          {
+            "allValue": null,
+            "current": {
+              "text": "All",
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": "Prometheus",
+            "definition": "label_values(harbor_artifacts_vulnerabilities,repo_name)",
+            "hide": 0,
+            "includeAll": true,
+            "label": "Repo Name",
+            "multi": true,
+            "name": "repo_name",
+            "options": [
+              {
+                "selected": true,
+                "text": "All",
+                "value": "$__all"
+              }
+            ],
+            "query": "label_values(repo_name)",
+            "refresh": 0,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "tagValuesQuery": "",
+            "tags": [],
+            "tagsQuery": "",
+            "type": "query",
+            "useTags": false
+          },
+          {
+            "allValue": null,
+            "current": {
+              "text": "All",
+              "value": [
+                "$__all"
+              ]
+            },
+            "datasource": "Prometheus",
+            "definition": "label_values(project_name)",
+            "hide": 0,
+            "includeAll": true,
+            "label": null,
+            "multi": true,
+            "name": "project_name",
+            "options": [
+              {
+                "selected": true,
+                "text": "All",
+                "value": "$__all"
+              }
+            ],
+            "query": "label_values(project_name)",
+            "refresh": 0,
+            "regex": "",
+            "skipUrlSync": false,
+            "sort": 0,
+            "tagValuesQuery": "",
+            "tags": [],
+            "tagsQuery": "",
+            "type": "query",
+            "useTags": false
+          }
+        ]
       },
       "time": {
-        "from": "now-6h",
+        "from": "now-1h",
         "to": "now"
       },
       "timepicker": {
@@ -304,7 +589,7 @@ data:
       },
       "timezone": "",
       "title": "Harbor Overview",
-      "uid": "Chkv50UWk",
-      "version": 6
+      "uid": "ZmLnhxi7z",
+      "version": 22
     }
 `}}
