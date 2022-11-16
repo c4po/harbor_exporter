@@ -11,7 +11,7 @@ import (
 func (h *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric) bool {
 	start := time.Now()
 	type systemVolumesMetric struct {
-		Storage struct {
+		Storage []struct {
 			Total float64
 			Free  float64
 		}
@@ -23,11 +23,16 @@ func (h *HarborExporter) collectSystemVolumesMetric(ch chan<- prometheus.Metric)
 		return false
 	}
 
+	if len(data.Storage) < 1 {
+		level.Error(h.logger).Log("msg", "Error retrieving system volumes")
+		return false
+	}
+
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Total, "total",
+		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage[0].Total, "total",
 	)
 	ch <- prometheus.MustNewConstMetric(
-		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage.Free, "free",
+		allMetrics["system_volumes_bytes"].Desc, allMetrics["system_volumes_bytes"].Type, data.Storage[0].Free, "free",
 	)
 
 	reportLatency(start, "system_volumes_latency", ch)
