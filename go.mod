@@ -4,9 +4,8 @@ go 1.14
 
 require (
 	github.com/go-kit/kit v0.10.0
-	github.com/prometheus/client_golang v1.7.0
-	github.com/prometheus/common v0.10.0
-	golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f // indirect
+	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/common v0.26.0
 	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
